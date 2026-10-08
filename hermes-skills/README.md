@@ -11,15 +11,22 @@ Videonya kamu bikin sendiri di Flow. Upload ke TikTok dan pasang link produk jug
 ## Setup (sekali)
 1. Clone repo ini di PC tempat Hermes jalan:
    `git clone https://github.com/AmarJSB/jsb.git`
-2. Tambahin folder ini ke `~/.hermes/config.yaml` (Windows: `%LOCALAPPDATA%\hermes\config.yaml`),
-   lalu restart Hermes:
+2. Install `uv`. `uv` bawaan Hermes itu internal dan gak masuk PATH, jadi harus install sendiri:
+   - Linux/WSL/Mac: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+   - Windows (PowerShell): `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
+
+   Habis itu buka terminal baru.
+3. Buka `~/.hermes/config.yaml` (Windows: `%LOCALAPPDATA%\hermes\config.yaml`). Di situ biasanya
+   udah ada baris `skills:`. Tambahin `external_dirs` **di bawah baris itu** (indent 2 spasi), jangan
+   bikin blok `skills:` kedua (config-nya jadi gak kebaca):
    ```yaml
    skills:
+     # ...setting lama biarin aja...
      external_dirs:
        - /path/ke/jsb/hermes-skills
    ```
-3. Pastikan `GLM_API_KEY=...` ada di `~/.hermes/.env` (biasanya udah ada dari setup provider
-   z.ai), dan saldo z.ai pay-as-you-go-nya ada isinya.
+   Pastikan juga `GLM_API_KEY=...` ada di `~/.hermes/.env` (biasanya udah ada dari setup provider
+   z.ai) dan saldo z.ai pay-as-you-go-nya ada isinya. Terus restart Hermes.
 4. Warm-up (gratis, gak manggil API). Pakai foto produk apa aja sebagai `contoh.jpg`:
    ```
    cd jsb/hermes-skills/tiktok-pack/scripts

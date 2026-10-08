@@ -166,9 +166,9 @@ def main(argv=None):
     try:
         if a.scene and BANNED.search(a.scene):
             raise Fail("Scene gak boleh nyebut produk/botol/merek/teks, biar AI gak bikin botol palsu. Tulis lingkungannya aja.")
-        key = api_key() if a.scene else None  # cek key dulu sebelum proses yang lama
+        key = None if a.backdrop else api_key()  # cek key dulu sebelum proses yang lama
         cut, warns = cutout(load(a.photo))  # cutout sebelum bayar API: foto jelek gak buang saldo
-        bg = zai_backdrop(a.scene, key) if a.scene else load(a.backdrop)
+        bg = load(a.backdrop) if a.backdrop else zai_backdrop(a.scene, key)
         hero, s = composite(bg, cut)
         if s > 1.5:
             warns.append(f"foto produk kecil (di-zoom {s:.1f}x), hasil bisa kurang tajam")

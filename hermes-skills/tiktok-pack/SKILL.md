@@ -13,39 +13,49 @@ the real product, and BPOM polices cosmetic claims.
 
 ## When to use
 - Amar types `/tiktok-pack`, or sends product photos and asks for content to sell.
-- Input = every image he sent since the last pack (album photos arrive as separate messages, each as
-  "[User sent an image: <path>]") + the seller description (photo caption or text). Use at most 3.
+- Input = every photo he sent since the last pack (Hermes shows each one with its local file path) +
+  the seller description (photo caption or text). Use at most 3.
 - No description → ask once for it (copy from the seller listing), then wait. No photo → ask for one.
 - One product per pack. Photos of different products → ask which one.
 
 ## 1. Facts
-- From the seller TEXT only: brand, product name, variant, size (ml), scent notes, BPOM NA number,
-  the seller's own claims. Never take the NA number from a photo (digits get misread).
+- From the seller TEXT only: brand, product name, variant, size (ml), scent notes, BPOM notification
+  number (NA/NB/NC/ND/NE + 11 digits), the seller's own claims (skip comparisons to other brands).
+  Never take the BPOM number from a photo (digits get misread).
 - From the PHOTOS only appearance: colors, cap, bottle shape, material, spray atomizer or not.
 - Never invent a fact. Unknown → leave it out.
-- No NA number in the text → add the warning line in the reply.
+- No BPOM number in the text → add the warning line in the reply.
 
 ## 2. Hero image
 1. Pick the cleanest photo: a single product, fully visible including the cap, sharp, no "ORI 100%"
-   badge, watermark, text overlay or other products. None qualifies → skip steps 2-5, say why in one
-   line, and still send the text pack.
+   badge, price banner, watermark, text overlay or other products. None qualifies → skip steps 2-5,
+   say why in one line, and still send the text pack.
 2. Write the scene: English, one sentence, at most 40 words, environment only (surface, background,
    light). Props only from the listed scent notes (rose petals for rose, citrus slices for citrus).
-   Colors that complement the bottle; light direction like the photo. Never mention perfume, bottle,
-   product, brand, label, logo or text (the script rejects them). Plain words only: no quotes, `$`
-   or backticks.
+   Tobacco, smoke or alcohol notes (tobacco, cigar, rum, whiskey, cognac, wine, champagne): no props
+   for them; use warm wood, amber light or vanilla pods instead. Colors that complement the bottle;
+   light direction like the photo. Never mention perfume, bottle, product, brand, label, logo or
+   text, not even negated like "no text" (the script rejects them and adds the negatives itself).
+   Plain words only: no quotes, `$` or backticks.
 3. Run exactly one command, paths quoted:
    `uv run "${HERMES_SKILL_DIR}/scripts/hero.py" "<photo path>" --scene "<scene>"`
-   - `uv` not found → use `~/.local/bin/uv` (Windows: `%USERPROFILE%\.local\bin\uv.exe`).
+   - `uv` not found → use `~/.local/bin/uv` (works on every OS, including Windows).
    - The first run downloads ~300 MB and can take minutes. If the terminal moves it to the
      background, wait for it. Never start a second copy.
    - Never print or `cat` the `.env` file or the API key. The script reads the key itself.
-4. Read the output: `WARN:` lines (pass them on), last line `HERO: <path>`. An `ERROR:` line is
-   already in Indonesian: pass it on and continue with the text pack. Do not retry balance or key
-   errors.
+4. Read the output: `WARN:` lines (pass them on), last line `HERO: <path>`.
+   - Scene rejected (the "Scene gak boleh..." ERROR or the content-filter ERROR) → rewrite the scene
+     and run once more.
+   - Any other `ERROR:` line, or a second failure → pass it on (already in Indonesian) and continue
+     with the text pack. Never retry balance or key errors.
 5. Look at the hero with vision: exactly one product, no extra bottles or products, no letters added
-   in the background, nothing cut off, looks natural. Fails → run once more with a different scene.
-   Fails again → skip the hero and say so. Each run costs about $0.015; max 2 runs unless Amar asks.
+   in the background, nothing cut off, looks natural.
+   - Background problem (extra bottle, letters) → run once more with a different scene.
+   - Product problem (cut off, extra object kept) → the same photo gives the same cutout, so run once
+     more with the next-best photo and `--backdrop "<folder of the HERO>/backdrop.jpg"` instead of
+     `--scene` (free). No other usable photo → skip the hero.
+   - Fails again → skip the hero and say so. Each `--scene` run costs about $0.015; max 2 runs per
+     pack unless Amar asks.
 
 ## 3. Reply (Indonesian, this order)
 The hero goes out as a file through a `MEDIA:` line. Rules: the line is plain text on its own line
@@ -57,12 +67,15 @@ MEDIA:<the HERO path>
 
 **Video di Google Flow**
 1. Flow → Frames to Video → upload gambar di atas sebagai frame awal, rasio 9:16, durasi 8 detik.
+   (Gak ada hero: pakai foto seller yang bersih, tanpa badge/teks/harga/produk lain. Gak ada yang
+   bersih → lewati bagian video ini.)
 2. Clip A (copy):
 <code block: prompt A>
 3. Clip B (copy):
 <code block: prompt B>
 4. Gabung A+B di CapCut/editor TikTok.
-Kalau botol/label berubah: ulang klipnya pakai foto asli seller sebagai frame awal.
+Kalau botol/label berubah: ulang klipnya pakai foto seller yang dipakai buat hero (sebut foto
+ke-berapa, jangan path-nya) sebagai frame awal.
 
 **Caption + hashtag (copy)**
 <code block: caption, empty line, hashtags>
@@ -80,30 +93,36 @@ Kalau botol/label berubah: ulang klipnya pakai foto asli seller sebagai frame aw
 - [ ] Pasang link produk dari Showcase (keranjang kuning)
 - [ ] Cek tiap frame: label, tutup, warna sama dengan foto asli
 - [ ] Ada yang berubah → jangan posting, ulang klipnya
-- [ ] Nomor NA BPOM ada (cek di cekbpom.pom.go.id)
+- [ ] Nomor BPOM dicek di cekbpom.pom.go.id: merek & nama produk cocok
 - [ ] Pakai suara/footage kamu sendiri, jangan cuma teks + musik
 ```
 
-Warning lines: no NA number → "Nomor NA BPOM gak ada di deskripsi seller. Cek dulu di
-cekbpom.pom.go.id sebelum promosi." Plus every `WARN:` from the script and any skipped-hero reason.
+Warning lines: no BPOM number → "Nomor BPOM (NA/NB/NC/ND/NE...) gak ada di deskripsi seller. Cek
+dulu di cekbpom.pom.go.id sebelum promosi." Plus every `WARN:` from the script and any skipped-hero
+reason.
 
 ## 4. Flow prompts (English, at most 80 words each)
 Frames to Video only locks the first frame; Veo redraws the rest, so keep motion small.
 - Clip A: slow push-in with a soft light sweep across the glass.
-- Clip B: subtle parallax with gentle background elements from the scent notes (petals, mist, bokeh).
+- Clip B: subtle parallax with gentle background elements from the scent notes (petals, mist, bokeh);
+  never smoke, cigars or drinks.
 - Every prompt ends with: "The product stays exactly as in the first frame: same shape, cap, colors
-  and label. Gentle camera, orbit under 15 degrees. No hands, no people. No speech, no voiceover,
-  no on-screen text. Soft ambient music only."
+  and label. Gentle camera; the product keeps facing the camera the whole time. No hands, no people.
+  No speech, no voiceover, no on-screen text. Soft ambient music only."
 - Spray mist only if the photos show an atomizer.
 
 ## 5. Copy rules
 - Casual, polite Indonesian. Caption at most 300 characters, the first line is the hook, 1-2 facts
   from the seller text, ends with a CTA to the yellow basket ("cek keranjang kuning").
-- 3-5 relevant hashtags (category, scent, brand if given).
+- 3-5 relevant hashtags (category, scent, this product's brand only if given).
 - On-screen text: 3 lines, at most 6 words each.
 - Voiceover: about 35-40 words for 15 seconds, describing look and scent notes. First-person usage
   ("aku udah pakai...") only if Amar says he has tried the product.
 - Longevity or effect claims only if the seller text states them, never exaggerated.
-- Never use: 100%, ampuh, dijamin, pasti, paling/no.1/terlaris, feromon/pheromone, "bikin orang
-  tertarik/nempel", 24 jam/seharian, "ori/original" claims, medical or skin-treatment claims,
-  prices or discounts, fake testimonials, fake stories, fake urgency ("stok tinggal 3!").
+- Never use: 100%, ampuh, dijamin, pasti, paling/no.1/terlaris, feromon/pheromone, attraction or
+  seduction claims in any wording ("bikin orang tertarik/nempel", "dilirik", "menggoda", "memikat"),
+  24 jam/seharian, "ori/original/asli/murni" claims, safety claims ("aman", "tanpa efek samping",
+  "aman buat bumil/kulit sensitif"), medical or skin-treatment claims, other brands' or perfumes'
+  names and comparisons ("inspired by", "terinspirasi", "mirip", "dupe", "KW", "alternatif X":
+  describe only this product's own scent notes), prices or discounts, fake testimonials, fake
+  stories, fake urgency ("stok tinggal 3!").
