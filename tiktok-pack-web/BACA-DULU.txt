@@ -1,0 +1,45 @@
+TIKTOK PACK - CARA PAKAI
+========================
+
+Foto produk + deskripsi seller -> hero image 9:16 (produk asli + background AI),
+prompt Google Flow, caption + hashtag, teks layar, naskah VO, checklist posting.
+Semua jalan di PC kamu sendiri. Yang dikirim ke internet cuma ke z.ai.
+
+PERTAMA KALI
+1. Klik kanan file zip -> Properties -> centang "Unblock" -> OK.
+2. Klik kanan zip -> Extract All. Jangan jalanin dari dalam zip.
+3. Buka folder hasil ekstrak, klik dua kali "Mulai" (file .bat, ikon roda gigi).
+   - Kalau muncul "Windows protected your PC": klik More info -> Run anyway.
+   - Pertama kali download sekitar 350 MB (Python, library, model pemotong
+     background). Bisa 5-15 menit tergantung internet.
+   - Browser kebuka sendiri. Kalau gak, buka http://127.0.0.1:8765
+4. Di halaman web, buka "Pengaturan z.ai", tempel API key, klik Simpan.
+   API key ambil di z.ai: login -> menu API Keys -> bikin key baru.
+   Saldo z.ai (pay-as-you-go) harus ada isinya.
+
+PEMAKAIAN
+- Pilih 1-3 foto produk (JPG/PNG/WebP, maks 15 MB per foto; HEIC gak bisa).
+- Tempel deskripsi dari seller, lalu klik "Bikin paket".
+- Teks muncul duluan, gambar nyusul (total sekitar 30-90 detik).
+- Gambar kurang pas? Edit scene atau pilih foto lain, klik "Ulang gambar".
+- Biaya kira-kira: $0.015 per background baru, teks di bawah $0.01.
+- Semua hasil tersimpan di folder data\hasil\.
+
+PENTING
+- Jangan tutup jendela hitam selama dipakai. Tutup jendela = aplikasi berhenti.
+- Kalau judul jendela hitam ada tulisan "Select", tekan Esc.
+- Video tetap kamu bikin manual di Google Flow pakai prompt dari aplikasi.
+- Waktu posting: nyalain label konten AI dan pasang link produk dari Showcase.
+
+KALAU ADA MASALAH
+- "DLL load failed": install Visual C++ Redistributable dari
+  https://aka.ms/vs/17/release/vc_redist.x64.exe lalu buka Mulai lagi.
+- Gagal memasang uv: buka PowerShell, jalankan
+  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+  atau: winget install astral-sh.uv
+  Lalu buka Mulai lagi.
+- "Aplikasi gak nyambung" di browser: jendela hitamnya ketutup. Buka Mulai lagi.
+- Error lain: foto layar jendela hitam dan kirim ke Claude.
+
+UPDATE
+Ekstrak zip versi baru di atas folder lama. Folder data\ (API key + hasil) tetap aman.

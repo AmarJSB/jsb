@@ -1,0 +1,2 @@
+*.bat text eol=crlf
+tiktok-pack-web/*.txt text eol=crlf

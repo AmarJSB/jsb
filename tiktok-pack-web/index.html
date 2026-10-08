@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TikTok Pack</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --card: #ffffff; --ink: #1d1d1f; --muted: #6b6b70; --line: #e3e1dc;
+    --accent: #e8344e; --accent-ink: #ffffff; --warn-bg: #fff4d6; --warn-ink: #6b4b00; --code: #f1f0ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141416; --card: #1e1e21; --ink: #ececef; --muted: #a0a0a8; --line: #303036;
+      --accent: #ff5a70; --accent-ink: #141416; --warn-bg: #3a2f12; --warn-ink: #ffd98a; --code: #26262a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, "Segoe UI", sans-serif; }
+  main { max-width: 1120px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { margin: 0; font-size: 26px; }
+  h2 { margin: 0 0 10px; font-size: 16px; }
+  header p { margin: 4px 0 20px; color: var(--muted); }
+  .card, details { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  summary { cursor: pointer; font-weight: 600; }
+  label { display: block; margin: 12px 0 4px; font-weight: 600; }
+  label.row { display: flex; gap: 8px; align-items: center; font-weight: 400; }
+  input[type=password], select, textarea { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; }
+  textarea { resize: vertical; }
+  button { padding: 9px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; padding: 11px 22px; }
+  button:disabled { opacity: .5; cursor: wait; }
+  .actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+  .status { color: var(--muted); }
+  small { display: block; color: var(--muted); margin-top: 6px; }
+  #thumbs { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  #thumbs figure { margin: 0; text-align: center; font-size: 13px; color: var(--muted); }
+  #thumbs img { width: 96px; height: 96px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); display: block; }
+  .warn { background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; padding: 8px 12px; margin: 0 0 8px; }
+  .grid { display: grid; grid-template-columns: 360px 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+  #heroBox { aspect-ratio: 9 / 16; background: var(--code); border-radius: 10px; overflow: hidden; display: grid; place-items: center; color: var(--muted); text-align: center; padding: 0; }
+  #heroImg { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .block { border-top: 1px solid var(--line); padding: 14px 0 6px; }
+  .block:first-child { border-top: 0; padding-top: 0; }
+  .block h3 { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 14px; }
+  .block h3 button { padding: 4px 10px; font-size: 13px; }
+  pre { margin: 0; padding: 10px 12px; background: var(--code); border-radius: 8px; white-space: pre-wrap; word-break: break-word; font: 14px/1.5 system-ui, "Segoe UI", sans-serif; }
+  ol, ul { margin: 0; padding-left: 20px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>TikTok Pack</h1>
+    <p>Foto produk + deskripsi seller → hero image 9:16, prompt Google Flow, caption, hashtag, naskah VO.</p>
+  </header>
+
+  <details id="settings">
+    <summary>Pengaturan z.ai</summary>
+    <label for="key">API key z.ai</label>
+    <input id="key" type="password" autocomplete="off" placeholder="Tempel API key dari z.ai">
+    <small id="keyHint"></small>
+    <label for="model">Model AI buat teks &amp; baca foto</label>
+    <select id="model"></select>
+    <div class="actions"><button id="save">Simpan</button><span id="saveMsg" class="status"></span></div>
+  </details>
+
+  <section class="card">
+    <label for="files">Foto produk dari seller (1–3, JPG/PNG/WebP)</label>
+    <input id="files" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+    <div id="thumbs"></div>
+    <label for="desc">Deskripsi dari seller</label>
+    <textarea id="desc" rows="6" placeholder="Copy-paste deskripsi produk dari listing seller (merek, nama, ukuran, notes aroma, nomor BPOM...)"></textarea>
+    <label class="row"><input id="tried" type="checkbox"> Aku udah pernah pakai produk ini</label>
+    <div class="actions"><button id="go" class="primary">Bikin paket</button><span id="status" class="status"></span></div>
+  </section>
+
+  <section id="result" hidden>
+    <div id="warnings"></div>
+    <div class="grid">
+      <div class="card">
+        <h2>Hero image</h2>
+        <div id="heroBox"><img id="heroImg" alt="Hero image" hidden><span id="heroEmpty">Belum ada gambar</span></div>
+        <div class="actions"><a id="download" hidden>Download gambar</a></div>
+        <label for="photo">Foto yang dipakai</label>
+        <select id="photo"></select>
+        <label for="scene">Scene background (bahasa Inggris)</label>
+        <textarea id="scene" rows="3"></textarea>
+        <div class="actions"><button id="regen">Ulang gambar</button><span id="heroStatus" class="status"></span></div>
+        <small>Scene baru = background baru (±$0.015). Scene sama + foto lain = gratis.</small>
+      </div>
+      <div class="card" id="texts"></div>
+    </div>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let photos = [], job = null;
+
+async function api(path, body) {
+  const opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  let res;
+  try { res = await fetch(path, opt); }
+  catch { throw new Error("Aplikasi gak nyambung. Pastikan jendela hitam (Mulai.bat) masih kebuka."); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.error) throw new Error(data.error || `Error ${res.status}`);
+  return data;
+}
+
+function ticking(el, msg) {
+  const t0 = Date.now();
+  el.textContent = msg;
+  const id = setInterval(() => { el.textContent = `${msg} ${Math.round((Date.now() - t0) / 1000)} dtk`; }, 1000);
+  return () => clearInterval(id);
+}
+
+function showSettings(s) {
+  $("keyHint").textContent = s.has_key ? `Key tersimpan: ${s.key_hint}` : "Belum ada key. Ambil di z.ai (menu API Keys).";
+  $("model").replaceChildren(...s.models.map(([id, label]) => new Option(label, id, false, id === s.model)));
+  $("settings").open = !s.has_key;
+}
+
+api("/api/settings").then(showSettings).catch((e) => { $("saveMsg").textContent = e.message; });
+
+$("save").onclick = async () => {
+  try {
+    showSettings(await api("/api/settings", { key: $("key").value, model: $("model").value }));
+    $("key").value = "";
+    $("saveMsg").textContent = "Tersimpan.";
+  } catch (e) { $("saveMsg").textContent = e.message; }
+};
+
+const readFile = (f) => new Promise((ok, bad) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = bad; r.readAsDataURL(f); });
+
+$("files").onchange = async () => {
+  photos = [];
+  $("thumbs").replaceChildren();
+  const notes = [];
+  for (const f of [...$("files").files].slice(0, 3)) {
+    if (f.size > 15e6) { notes.push(`${f.name} lebih dari 15 MB, dilewati.`); continue; }
+    photos.push(await readFile(f));
+    const fig = document.createElement("figure");
+    const img = new Image(); img.src = photos.at(-1);
+    fig.append(img, `Foto ${photos.length}`);
+    $("thumbs").append(fig);
+  }
+  if ($("files").files.length > 3) notes.push("Cuma 3 foto pertama yang dipakai.");
+  $("status").textContent = notes.join(" ");
+};
+
+function block(title, content, copy) {
+  const div = document.createElement("div"); div.className = "block";
+  const h = document.createElement("h3"); h.append(title);
+  if (copy) {
+    const b = document.createElement("button"); b.textContent = "Copy";
+    b.onclick = () => navigator.clipboard.writeText(copy).then(() => { b.textContent = "Ke-copy ✓"; }, () => { b.textContent = "Copy manual ya"; });
+    h.append(b);
+  }
+  div.append(h, content);
+  return div;
+}
+function pre(s) { const p = document.createElement("pre"); p.textContent = s; return p; }
+function list(tag, items) { const l = document.createElement(tag); for (const t of items) { const li = document.createElement("li"); li.textContent = t; l.append(li); } return l; }
+
+function render(d) {
+  $("result").hidden = false;
+  $("warnings").replaceChildren(...d.warnings.map((w) => { const p = document.createElement("p"); p.className = "warn"; p.textContent = w; return p; }));
+  $("photo").replaceChildren(...Array.from({ length: d.photos }, (_, i) => new Option(`Foto ${i + 1}`, i + 1, false, i + 1 === (d.best_photo || 1))));
+  $("scene").value = d.scene;
+  $("heroImg").hidden = true; $("download").hidden = true;
+  $("heroEmpty").textContent = d.best_photo ? "Lagi dibikin..." : "Gak ada foto yang cukup bersih. Pilih foto lalu klik Ulang gambar kalau tetap mau coba.";
+  $("heroEmpty").hidden = false;
+  const p = d.pack;
+  $("texts").replaceChildren(
+    block("Video di Google Flow", list("ol", [
+      "Buka Google Flow → Frames to Video.",
+      "Upload hero image sebagai frame awal, rasio 9:16, durasi 8 detik.",
+      "Bikin Clip A dan Clip B pakai prompt di bawah, lalu gabung di CapCut/editor TikTok.",
+      "Kalau botol/label berubah di video: ulang klipnya, atau pakai foto seller yang bersih sebagai frame awal.",
+    ])),
+    block("Clip A", pre(p.flow_a), p.flow_a),
+    block("Clip B", pre(p.flow_b), p.flow_b),
+    block("Caption + hashtag", pre(p.caption), p.caption),
+    block("Teks layar", pre(p.onscreen.join("\n")), p.onscreen.join("\n")),
+    block("Naskah VO 15 detik (rekam pakai suara kamu)", pre(p.voiceover), p.voiceover),
+    block("Checklist posting", list("ul", [
+      "Nyalain label konten AI pas posting.",
+      "Pasang link produk dari Showcase (keranjang kuning).",
+      "Cek tiap frame video: label, tutup, warna sama dengan foto asli.",
+      "Ada yang berubah → jangan posting, ulang klipnya.",
+      "Nomor BPOM dicek di cekbpom.pom.go.id: merek & nama produk cocok.",
+      "Pakai suara/footage kamu sendiri, jangan cuma teks + musik.",
+    ])),
+  );
+}
+
+async function makeHero(n) {
+  $("regen").disabled = true;
+  const stop = ticking($("heroStatus"), "Lagi bikin gambar...");
+  try {
+    const d = await api("/api/hero", { job, photo: n, scene: $("scene").value });
+    $("heroImg").src = d.url; $("heroImg").hidden = false; $("heroEmpty").hidden = true;
+    $("download").href = d.url; $("download").download = `tiktok-hero-${job}.jpg`; $("download").hidden = false;
+    stop();
+    $("heroStatus").textContent = d.warnings.join(" ");
+  } catch (e) { stop(); $("heroStatus").textContent = e.message; }
+  finally { $("regen").disabled = false; }
+}
+
+$("regen").onclick = () => { if (job) makeHero(+$("photo").value); };
+
+$("go").onclick = async () => {
+  if (!photos.length) { $("status").textContent = "Pilih minimal 1 foto."; return; }
+  if (!$("desc").value.trim()) { $("status").textContent = "Isi deskripsi seller dulu."; return; }
+  $("go").disabled = true;
+  const stop = ticking($("status"), "Lagi baca foto & nulis teks...");
+  try {
+    const d = await api("/api/analyze", { photos, description: $("desc").value, tried: $("tried").checked });
+    stop(); $("status").textContent = "";
+    job = d.job;
+    render(d);
+    if (d.best_photo > 0) await makeHero(d.best_photo);
+  } catch (e) { stop(); $("status").textContent = e.message; }
+  finally { $("go").disabled = false; }
+};
+</script>
+</body>
+</html>
