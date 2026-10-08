@@ -16,17 +16,25 @@ import time
 from io import BytesIO
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter, ImageOps
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageOps, ImageStat
 
 W, H = 1080, 1920
-H_MAX, W_MAX, BASE_Y = 0.42, 0.70, 0.72  # produk di tengah, aman dari UI TikTok di bawah & kanan
+# tinggi maks, lebar maks, posisi dasar, pusat x (relatif kanvas). Aman dari UI TikTok di bawah & kanan.
+LAYOUTS = {
+    "hero": (0.42, 0.70, 0.72, 0.50),   # berdiri di meja, tengah
+    "close": (0.80, 0.80, 0.90, 0.50),  # close-up, produk hampir penuh layar
+    "side": (0.46, 0.50, 0.73, 0.64),   # agak ke kanan, ruang teks di kiri (penutup/CTA)
+    "hand": (0.36, 0.55, 0.64, 0.50),   # melayang di depan background blur, siap "dipegang" di Nano Banana
+}
 API = "https://api.z.ai/api/paas/v4/images/generations"
 KEY_VARS = ("GLM_API_KEY", "ZAI_API_KEY", "Z_AI_API_KEY")
 SUFFIX = (
-    ", empty surface in the foreground center, eye-level straight-on camera, shallow depth of field,"
-    " soft natural light, photorealistic, vertical composition, no products, no bottles, no containers,"
-    " no people, no hands, no text, no letters, no logos, no watermark"
+    ", 85mm lens look, the surface fills the lower third of the frame, the empty spot on the surface in the"
+    " foreground center in sharp focus, background softly defocused, photorealistic, vertical composition,"
+    " no products, no bottles, no containers, no people,"
+    " no hands, no text, no letters, no logos, no watermark"
 )
+GLOSSY = re.compile(r"\b(glass|acrylic|mirror|marble|water|glossy|polished|lacquer|reflective)\b", re.I)
 BANNED = re.compile(r"\b(perfumes?|parfum|fragrances?|colognes?|flacons?|vials?|atomizers?|bottles?|botol|products?"
                     r"|produk|logos?|labels?|text|brand|merek)\b", re.I)
 ERRORS = {
@@ -107,24 +115,57 @@ def cutout(photo):
     return clean(remove(photo, session=new_session("u2net"), post_process_mask=True))
 
 
-def place(cw, ch):
+def place(cw, ch, layout="hero"):
     """Skala + kotak (x, y, w, h) produk di kanvas W x H."""
-    s = min(H_MAX * H / ch, W_MAX * W / cw)
+    hm, wm, base, cx = LAYOUTS[layout]
+    s = min(hm * H / ch, wm * W / cw)
     w, h = round(cw * s), round(ch * s)
-    return s, ((W - w) // 2, round(BASE_Y * H) - h, w, h)
+    return s, (round(cx * W - w / 2), round(base * H) - h, w, h)
 
 
-def composite(bg, cut):
-    s, (x, y, w, h) = place(*cut.size)
+def tint(prod, bg, k=0.12):
+    """Kasih sedikit warna cahaya scene ke produk biar gak keliatan ditempel. k kecil: warna label tetap asli."""
+    y, cb, cr = prod.convert("RGB").convert("YCbCr").split()
+    m = ImageStat.Stat(bg.convert("YCbCr")).mean
+    cb, cr = cb.point(lambda v: v + k * (m[1] - 128)), cr.point(lambda v: v + k * (m[2] - 128))
+    out = Image.merge("YCbCr", (y, cb, cr)).convert("RGB")
+    out.putalpha(prod.getchannel("A"))
+    return out
+
+
+def composite(bg, cut, layout="hero", glossy=False, grain=True):
+    s, (x, y, w, h) = place(*cut.size, layout)
     canvas = ImageOps.fit(bg.convert("RGB"), (W, H), Image.LANCZOS)
-    sw, sh = round(w * 0.9), max(round(w * 0.12), 2)
-    shadow = Image.new("L", (W, H), 0)
-    cx = x + w // 2
-    ImageDraw.Draw(shadow).ellipse((cx - sw // 2, y + h - sh // 2, cx + sw // 2, y + h + sh // 2), fill=115)
-    canvas.paste((0, 0, 0), (0, 0, W, H), shadow.filter(ImageFilter.GaussianBlur(max(1, w * 0.05))))
-    prod = cut.resize((w, h), Image.LANCZOS)
+    if layout == "hand":  # dipegang di udara: background blur, tanpa bayangan meja
+        canvas = canvas.filter(ImageFilter.GaussianBlur(12))
+    prod = tint(cut.resize((w, h), Image.LANCZOS), canvas)
+    if layout != "hand":
+        cx, foot, sw, sh = x + w // 2, y + h, round(w * 0.9), max(round(w * 0.12), 2)
+        mask = Image.new("L", (W, H), 0)
+        ImageDraw.Draw(mask).ellipse((cx - sw // 2, foot - sh // 2, cx + sw // 2, foot + sh // 2), fill=115)
+        mask = mask.filter(ImageFilter.GaussianBlur(max(1, w * 0.05)))
+        line = Image.new("L", (W, H), 0)  # garis kontak tipis biar produk gak "melayang"
+        ImageDraw.Draw(line).ellipse((cx - w * 0.42, foot - w * 0.015, cx + w * 0.42, foot + w * 0.015), fill=200)
+        mask = ImageChops.lighter(mask, line.filter(ImageFilter.GaussianBlur(max(1, w * 0.01))))
+        dark = ImageChops.multiply(canvas, Image.new("RGB", (W, H), (70, 64, 58)))  # bayangan ikut warna permukaan
+        canvas = Image.composite(dark, canvas, mask)
+        if glossy:  # pantulan samar di permukaan mengkilap
+            ref = ImageOps.flip(prod).crop((0, 0, w, round(h * 0.35))).filter(ImageFilter.GaussianBlur(1.5))
+            fade = ImageOps.invert(Image.linear_gradient("L").resize(ref.size))
+            canvas.paste(ref.convert("RGB"), (x, foot), ImageChops.multiply(ref.getchannel("A"), fade).point(lambda v: v * 0.28))
     canvas.paste(prod, (x, y), prod)
+    if grain:  # grain halus nyatuin tekstur foto asli dengan background AI
+        canvas = ImageChops.add(canvas, Image.effect_noise((W, H), 3).convert("RGB"), 1.0, -128)
     return canvas, s
+
+
+def reference(cut, size=1536):
+    """Produk di latar abu polos (bukan transparan): referensi buat Nano Banana/Ingredients di Flow."""
+    s = min(0.8 * size / cut.width, 0.8 * size / cut.height)
+    prod = cut.resize((round(cut.width * s), round(cut.height * s)), Image.LANCZOS)
+    canvas = Image.new("RGB", (size, size), (240, 240, 240))
+    canvas.paste(prod, ((size - prod.width) // 2, (size - prod.height) // 2), prod)
+    return canvas
 
 
 def zai_backdrop(scene, key):
@@ -170,7 +211,7 @@ def main(argv=None):
         key = None if a.backdrop else api_key()  # cek key dulu sebelum proses yang lama
         cut, warns = cutout(load(a.photo))  # cutout sebelum bayar API: foto jelek gak buang saldo
         bg = load(a.backdrop) if a.backdrop else zai_backdrop(a.scene, key)
-        hero, s = composite(bg, cut)
+        hero, s = composite(bg, cut, glossy=bool(a.scene and GLOSSY.search(a.scene)))
         if s > 1.5:
             warns.append(f"foto produk kecil (di-zoom {s:.1f}x), hasil bisa kurang tajam")
         root = hermes_home() / "cache" / "tiktok-pack"
