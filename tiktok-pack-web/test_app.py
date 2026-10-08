@@ -1,21 +1,17 @@
 # /// script
 # requires-python = ">=3.11,<3.15"
-# dependencies = ["pillow", "requests", "truststore"]
+# dependencies = ["requests", "truststore"]
 # ///
-"""Self-check tanpa jaringan & tanpa rembg. Jalankan: uv run test_app.py"""
+"""Self-check tanpa jaringan. Jalankan: uv run test_app.py"""
 import base64
 import json
 import tempfile
-import zipfile
-from io import BytesIO
 from pathlib import Path
 
-from PIL import Image, ImageChops
-
 import app
-import hero
 
-SLOT_CODES = ["a_hand", "a_hero", "a_notes", "a_fx", "r_face", "a_close", "r_face", "a_loop"]
+SLOT_CODES = ["a_hand", "a_hero", "a_notes", "a_fx", "r_face", "a_close", "r_face", "a_loop"]  # review 20 dtk
+JPEG = "data:image/jpeg;base64," + base64.b64encode(b"\xff\xd8\xff\xe0" + b"\0" * 64).decode()
 
 
 def reply(**over):
@@ -42,9 +38,14 @@ def reply(**over):
 def fails(fn, *args):
     try:
         fn(*args)
-    except hero.Fail as e:
+    except app.Fail as e:
         return str(e)
     raise AssertionError(f"{fn.__name__} harusnya gagal")
+
+
+def review(seconds=20, has_product=False, **over):
+    slots = app.resolve_slots("review", has_product, seconds)
+    return app.normalize(reply(**over), 3, "Parfum X 50ml NA18201200123", "review", slots, has_product, "wanita")
 
 
 def test_parse_reply():
@@ -54,62 +55,84 @@ def test_parse_reply():
     assert app.parse_reply('{"caption": "x"}\n\nJadi jawabannya: {"caption": "y"}') == {"caption": "x"}
     assert app.parse_reply('<think>{"caption": "salah"}</think>{"caption": "x"}') == {"caption": "x"}
     assert app.parse_reply('{"caption": "Hook!\nCek keranjang"}') == {"caption": "Hook!\nCek keranjang"}
+    assert app.parse_reply('Ini {rencana}: {"caption": "x"}') == {"caption": "x"}
+    assert app.parse_reply('{"name": "A", "is_product_page": true}', None, ("name",))["name"] == "A"
     assert "gak kebaca" in fails(app.parse_reply, "maaf, gak bisa")
-    assert "kepotong" in fails(app.parse_reply, '{"caption": "x', "length")
+    assert "kepotong" in fails(app.parse_reply, '{"hooks": [{"type": "a"}], "capt', "length")
     assert "filter" in fails(app.parse_reply, "", "sensitive")
 
 
-def test_storyboard_without_product():
-    slots = app.resolve_slots("review", False)
-    assert all(c == "r_face" or not c.startswith("r_") for _, _, cands in slots for c in cands)
-    r = app.normalize(reply(), 3, "Parfum X 50ml NA18201200123", "review", slots, False, "wanita")
-    shots = r["shots"]
+def test_templates_fit_every_duration():
+    for t, (name, needs, beats) in app.TEMPLATES.items():
+        assert beats[-1][2] == ["a_loop"] and beats[-1][3] == app.template_min(t), t
+        for d in app.DURATIONS:
+            if d < app.template_min(t):
+                continue
+            slots = app.resolve_slots(t, True, d)
+            assert sum(sec for _, sec, _ in slots) == d, (t, d)
+            assert not set(slots[0][2]) & {"a_notes", "a_scene"}, (t, d)  # frame pertama nampilin produk
+            assert d < 15 or any("r_face" in c for _, _, c in slots), (t, d)  # ada muka/suara Amar
+    assert app.template_min("alasan") == 15 and app.template_min("review") == 10
+    assert [len(app.resolve_slots("review", False, d)) for d in app.DURATIONS] == [4, 6, 8, 11, 16, 21]
+
+
+def test_storyboard_and_frames():
+    r = review()
+    shots, frames = r["shots"], r["frames"]
     assert [s["code"] for s in shots] == SLOT_CODES
-    assert r["template"] == {"id": "review", "name": "Review sensorik", "seconds": 24}
-    assert shots[0]["start"] == 0 and shots[-1]["end"] == 24 and shots[1]["start"] == shots[0]["end"]
-    hand = shots[0]
-    assert hand["kind"] == "ai" and hand["file"] == "3-siap-dipegang.jpg" and "6-produk-referensi.jpg" in hand["steps"]
-    assert hand["image_prompt"].startswith("Edit image 1. Add one realistic hand entering from the bottom edge")
-    assert "The hand holding the perfume bottle is one woman's right hand with warm medium-tan skin" in hand["image_prompt"]
-    assert 'the label reading "LAVENDER"' in hand["image_prompt"] and "five fingers" in hand["image_prompt"]
-    assert "Exactly one hand holds the perfume bottle: a woman's right hand with warm" in hand["video_prompt"]
+    assert r["template"] == {"id": "review", "name": "Review sensorik", "seconds": 20}
+    assert shots[0]["start"] == 0 and shots[-1]["end"] == 20 and shots[1]["start"] == shots[0]["end"]
+    assert [f["key"] for f in frames] == ["hero", "close", "hand", "side", "cover"]
+    hero, hand = frames[0], frames[2]
+    assert hero["prompt"].startswith("Image 1 is the real product photo. Create a photorealistic product photo")
+    assert "warm oak table" in hero["prompt"] and 'the label reading "LAVENDER"' in hero["prompt"]
+    assert hero["attach"] == "foto produk asli" and "Frame Hero (gambar 2)" in hand["attach"]
+    assert "The hand holding the perfume bottle is one woman's right hand with warm" in hand["prompt"]
+    assert "five fingers" in hand["prompt"] and "Exactly one perfume bottle" in hand["prompt"]
+    first = shots[0]
+    assert first["kind"] == "ai" and first["frame_label"] == "Frame Dipegang" and "start frame: Frame Dipegang" in first["steps"]
+    assert "Exactly one hand holds the perfume bottle: a woman's right hand with warm" in first["video_prompt"]
     assert "The perfume bottle stays exactly as it appears in the first frame" in shots[1]["video_prompt"]
     assert "Audio: soft room tone and petals only" in shots[1]["video_prompt"]
-    assert "No bottles, containers" in shots[2]["video_prompt"] and "stays exactly" not in shots[2]["video_prompt"]
-    assert "ends exactly on the provided last frame" in shots[-1]["video_prompt"]
+    assert "No bottles, containers" in shots[2]["video_prompt"] and shots[2]["frame"] == "" and "Text to Video" in shots[2]["steps"]
+    assert "ends exactly on the provided last frame" in shots[-1]["video_prompt"] and "DAN end frame: Frame Ruang Teks" in shots[-1]["steps"]
     assert shots[4]["kind"] == "rekam" and shots[4]["direction"] == "rekam ini" and not shots[4]["video_prompt"]
-    assert r["credits"] == {"clips": 6, "fast": 120, "lite": 60}
+    assert r["credits"] == {"frames": 5, "clips": 6, "fast": 120, "lite": 60}
     assert r["caption"].endswith("#parfum #lavender #parfumlokal")
-    assert any("gak pegang produknya" in w for w in r["warnings"])
-    assert not any("cekbpom" in w for w in r["warnings"])  # ada nomor BPOM
+    assert any("gak pegang produknya" in w for w in r["warnings"]) and not any("cekbpom" in w for w in r["warnings"])
+    scene = app.build_frames([{"frame": "scene", "edit": ""}], app.product_info(reply(), "auto"), "x")[1]
+    assert scene["key"] == "scene" and scene["attach"] == "Frame Hero" and "no products" in scene["prompt"]
+    assert "Exactly one" not in scene["prompt"]
+    r10 = review(10, shots=[])
+    assert [s["code"] for s in r10["shots"]] == ["a_hand", "a_hero", "a_notes", "a_loop"] and r10["vo_words"] > 0
 
 
 def test_codes_are_validated():
-    slots = app.resolve_slots("pov", False)
+    slots = app.resolve_slots("pov", False, 10)  # Hook POV, Suasana, Pakai, CTA
     bad = reply(shots=[{"code": c, "vo": "x", "motion": f"motion {c}", "direction": f"rekam {c}"}
-                       for c in ("r_spray", "a_scene", "a_spray", "a_notes", "r_face", "a_loop")], hooks=[])
+                       for c in ("r_spray", "a_scene", "a_spray", "a_loop")], hooks=[])
     shots = app.normalize(bad, 1, "x", "pov", slots, False)["shots"]
     assert shots[0]["code"] == "a_hand"  # gak punya produk -> gak bisa rekam semprot
-    assert shots[2]["code"] == "a_fx"  # atomizer false -> gak ada shot semprot
-    assert "motion a_spray" not in shots[2]["video_prompt"] and "drift slowly" in shots[2]["video_prompt"]
+    assert shots[2]["code"] == "a_fx" and "motion a_spray" not in shots[2]["video_prompt"]  # atomizer false
     assert shots[1]["video_prompt"].startswith("Motion a_scene.")  # kode sah: motion AI dipakai
     with_spray = reply(product={**reply()["product"], "atomizer": True}, shots=bad["shots"])
-    shots = app.normalize(with_spray, 1, "x", "pov", app.resolve_slots("pov", True), True)["shots"]
+    shots = app.normalize(with_spray, 1, "x", "pov", app.resolve_slots("pov", True, 10), True)["shots"]
     assert shots[0]["code"] == "r_pick" and shots[2]["code"] == "a_spray"  # r_spray gak sah di hook; a_spray sah
-    shots = app.normalize(reply(shots=[]), 1, "x", "unboxing", app.resolve_slots("unboxing", True), True)["shots"]
-    assert [s["code"] for s in shots] == ["r_pack", "r_pick", "r_size", "a_close", "r_face", "a_loop"]
+    r = app.normalize(with_spray, 1, "x", "pov", app.resolve_slots("pov", True, 10), True)
+    assert "spray" in [f["key"] for f in r["frames"]]
+    shots = app.normalize(reply(shots=[]), 1, "x", "unboxing", app.resolve_slots("unboxing", True, 15), True)["shots"]
+    assert [s["code"] for s in shots] == ["r_pack", "r_pick", "r_size", "r_face", "a_loop"]  # atomizer false
     assert shots[0]["text"] == "Wangi habis mandi"  # slot pertama diisi hook pertama
 
 
 def test_messy_llm_output():
-    slots = app.resolve_slots("review", False)
+    slots = app.resolve_slots("review", False, 20)
     nine = [{"code": c, "text": f"t{i}", "vo": f"v{i}"} for i, c in enumerate(SLOT_CODES + ["a_loop"])]
     nine[-1]["vo"] = "Cek keranjang kuning ya."
     r = app.normalize(reply(shots=nine), 1, "x", "review", slots, False)
     assert r["shots"][-1]["vo"] == "Cek keranjang kuning ya." and r["shots"][6]["vo"] == "v6"
     assert any("9 shot buat 8 slot" in w for w in r["warnings"])
-    six = reply(shots=nine[:5] + nine[-1:])
-    r = app.normalize(six, 1, "x", "review", slots, False)
+    r = app.normalize(reply(shots=nine[:5] + nine[-1:]), 1, "x", "review", slots, False)
     assert [s["vo"] for s in r["shots"]][3:] == ["v3", "v4", "", "", "Cek keranjang kuning ya."]
     r = app.normalize(reply(shots=[{"vo": "satu"}]), 1, "x", "review", slots, False)
     assert r["shots"][-1]["vo"] == app.CTA[1] and r["shots"][-1]["text"] == app.CTA[0]  # CTA cadangan
@@ -118,59 +141,41 @@ def test_messy_llm_output():
                             product={"noun": "perfume bottle", "label_text": False}), 2, "x", "review", slots, False)
     assert r["caption"].startswith("Baris 1\nBaris 2\n\n#parfum #parfumori") and r["cover"] == ""
     assert "petals, bokeh" in r["shots"][3]["video_prompt"]
-    assert "False" not in " ".join(r["warnings"]) + r["shots"][0]["image_prompt"]
+    assert "False" not in " ".join(r["warnings"]) + r["frames"][0]["prompt"] and "label reading" not in r["frames"][0]["prompt"]
     assert any("#parfumori" in w for w in r["warnings"]) and r["hooks"][0]["vo"] == "Wangi kalem"
-    assert 'label reading' not in r["shots"][0]["image_prompt"]
     for raw, best in (("2", 2), ("0", 0), (2.0, 2), (True, 1), (None, 1), (9, 1), ("x", 1)):
         assert app.normalize(reply(best_photo=raw), 2, "x", "review", slots, False)["best_photo"] == best, raw
+    assert app.normalize(reply(best_photo=None), 0, "x", "review", slots, False)["best_photo"] == 0  # tanpa foto
     echo = {"best_photo": 1, "hooks": [{"type": "", "text": "", "vo": ""}], "shots": [{"code": "", "vo": ""}], "caption": ""}
     assert "kosong" in fails(app.normalize, echo, 1, "x", "review", slots, False)
     r = app.normalize(reply(hand="woman's hand"), 1, "x", "review", slots, False, "pria")
-    assert "man's right hand" in r["shots"][0]["image_prompt"] and "woman" not in r["shots"][0]["image_prompt"]
-    assert app.parse_reply('Ini {rencana}: {"caption": "x"}') == {"caption": "x"}
-    assert "kepotong" in fails(app.parse_reply, '{"hooks": [{"type": "a", "text": "b"}], "capt', "length")
+    hand = next(f for f in r["frames"] if f["key"] == "hand")
+    assert "man's right hand" in hand["prompt"] and "woman" not in hand["prompt"]
 
 
 def test_warnings_and_lint():
     r = app.normalize(reply(hooks=[{"type": "x", "text": "Parfum terbaik, link di bio", "vo": "DM aku ya"}],
                             hashtags=["#parfumori"], best_photo=0, scene="perfume bottle on marble"),
-                      2, "Parfum X 50ml", "review", app.resolve_slots("review", True), True)
+                      2, "Parfum X 50ml", "review", app.resolve_slots("review", True, 20), True)
     w = " | ".join(r["warnings"])
     assert app.BPOM_WARNING in w and "terbaik" in w and "link di bio" in w and "dm" in w and "#parfumori" in w
     assert "scene netral" in w and r["scene"] == app.FALLBACK_SCENE and "gak pegang" not in w
+    assert app.FALLBACK_SCENE in r["frames"][0]["prompt"] and "Gak ada foto yang cukup bersih" in w
     assert not app.banned_hits("Harga terbarunya cek langsung di keranjang kuning, wanginya kalem")
     assert app.banned_hits("Beli di Shopee aja, chat WA") == ["shopee", "wa"]
-    assert "kosong" in fails(app.normalize, {"best_photo": 1}, 1, "x", "review", app.resolve_slots("review", False), False)
+    assert "kosong" in fails(app.normalize, {"best_photo": 1}, 1, "x", "review", app.resolve_slots("review", False, 20), False)
 
 
 def test_prompt_builder():
-    slots = app.resolve_slots("alasan", True)
+    slots = app.resolve_slots("alasan", True, 20)
     p = app.build_prompt('Parfum {x} [[DESC]] "oke"', 2, True, True, "auto", "alasan", slots, ["analogi"])
     assert "[[" not in p.replace("[[DESC]]", "") and 'Parfum {x} [[DESC]] "oke"' in p
-    assert "Template \"3 Alasan\", 21 seconds" in p and "r_pick, a_hand" in p and "put a different type first): analogi" in p
-    assert ", tes pakai, unboxing" in p and "about 48 words" in p and "First-person usage is allowed" in p
-    p = app.build_prompt("x", 1, False, False, "auto", "review", app.resolve_slots("review", False), [])
+    assert 'Template "3 Alasan", 20 seconds' in p and "r_pick, a_hand" in p and "put a different type first): analogi" in p
+    assert ", tes pakai, unboxing" in p and "about 46 words" in p and "First-person usage is allowed" in p
+    assert "2 product photo(s) are attached" in p and "video of 20 seconds" in p
+    p = app.build_prompt("x", 0, False, False, "auto", "review", app.resolve_slots("review", False, 10), [])
     assert "r_pick" not in p and "tes pakai" not in p and "Never write first-person usage" in p
-
-
-def test_zip_follows_hook():
-    old = app.OUT
-    with tempfile.TemporaryDirectory() as d:
-        app.OUT = Path(d)
-        try:
-            job = "20261008-101010-ab12"
-            (Path(d) / job).mkdir()
-            assert app.zip_bytes(job, "1", "0123456789", 0) is None  # aset belum ada
-            for key, _, _, _ in app.ASSETS:
-                Image.new("RGB", (9, 16)).save(Path(d) / job / f"{key}-1-0123456789.jpg")
-            r = app.normalize(reply(), 1, "x", "review", app.resolve_slots("review", False), False)
-            (Path(d) / job / "pack.json").write_text(json.dumps(r), encoding="utf-8")
-            for hook, vo in ((1, "Kamu tim wangi sabun?"), (0, "Wanginya kayak habis mandi."), (99, "Wanginya kayak habis mandi.")):
-                z = zipfile.ZipFile(BytesIO(app.zip_bytes(job, "1", "0123456789", hook)))
-                brief = z.read("brief.txt").decode("utf-8-sig")
-                assert len(z.namelist()) == 8 and f"   Ngomong: {vo}" in brief and brief.split("kata):\r\n")[1].startswith(vo)
-        finally:
-            app.OUT = old
+    assert "No photos are attached" in p and "10 seconds" in p and "about 23 words" in p
 
 
 def test_template_rotation():
@@ -178,30 +183,63 @@ def test_template_rotation():
     with tempfile.TemporaryDirectory() as d:
         app.OUT = Path(d)
         try:
-            assert app.pick_template("auto", False) == "review"
+            assert app.pick_template("auto", False, 20) == "review"
             for i, t in enumerate(["review", "alasan", "pov"]):
                 job = Path(d) / f"20261008-10000{i}-aaa{i}"
                 job.mkdir()
                 (job / "pack.json").write_text(json.dumps({"meta": {"template": t, "hook": "analogi"}}))
-            assert app.pick_template("auto", False) == "sinematik"  # unboxing butuh produk
-            assert app.pick_template("auto", True) == "unboxing"
-            assert app.pick_template("pov", False) == "pov" and app.pick_template("unboxing", False) == "sinematik"
+            assert app.pick_template("auto", False, 20) == "sinematik"  # unboxing butuh produk
+            assert app.pick_template("auto", True, 20) == "unboxing"
+            assert app.pick_template("auto", True, 10) == "sinematik"  # unboxing minimal 15 detik
+            assert app.pick_template("pov", False, 20) == "pov" and app.pick_template("unboxing", False, 20) == "sinematik"
+            assert app.pick_template("alasan", False, 10) == "sinematik"
         finally:
             app.OUT = old
 
 
-def test_cover_and_brief():
-    base = Image.new("RGB", (hero.W, hero.H), (90, 60, 120))
-    assert app.make_cover(base, "").tobytes() == base.tobytes()
-    for title in ("Wangi habis mandi, kalem banget buat ngantor", "Kemenyan Sandalwood-Patchouli 🔥", "WANGI-WANGIAN"):
-        cov = app.make_cover(base, title)
-        box = ImageChops.difference(cov, base).getbbox()
-        assert box and box[0] >= 110 and box[2] <= 970 and 290 <= box[1] and box[3] <= 560, (title, box)
-        assert cov.getpixel((540, 1500)) == (90, 60, 120)  # judul cuma di zona atas
-    r = app.normalize(reply(), 3, "Parfum X", "review", app.resolve_slots("review", False), False)
-    txt = app.brief(r, ["1-hero.jpg"])
-    assert "\r\n" in txt and "STORYBOARD:" in txt and "Prompt gambar: Edit image 1." in txt and "- 1-hero.jpg" in txt
-    assert txt.count("\n") == txt.count("\r\n") and "Tips: " in txt  # caption juga CRLF
+def test_brief_follows_hook():
+    r = {"job": "20261008-101010-ab12", "source": "Parfum X · Rp99.000", **review()}
+    txt = app.brief(app.with_hook(r, 1))
+    assert "\r\n" in txt and txt.count("\n") == txt.count("\r\n")
+    assert "LANGKAH 1 - FRAME DI FLOW" in txt and "* Frame Hero:" in txt and "Prompt: Image 1 is the real product photo" in txt
+    assert "Produk: Parfum X · Rp99.000" in txt and "Foto produk buat Flow: foto ke-2" in txt
+    assert "   Ngomong: Kamu tim wangi sabun?" in txt and txt.split("kata):\r\n")[1].startswith("Kamu tim wangi sabun?")
+    assert app.with_hook(r, 99) is r and "Tips: " in txt
+
+
+def test_page_extraction():
+    html = """<html><head><title>Parfum Lavender 50ml | Tokopedia</title>
+    <meta property="og:title" content="Parfum Lavender &amp; Musk 50ml"><meta name="description" content="Wangi kalem">
+    <meta property="og:image" content="https://images.example/p1.jpg"><meta name="viewport" content="x">
+    <script type="application/ld+json">{"@type": "Product", "name": "Parfum Lavender"}</script>
+    <script>var junk = "jangan kebaca";</script><style>.a{}</style></head>
+    <body><h1>Parfum Lavender</h1><p>Rp179.000 <s>Rp250.000</s> 28%</p><img src="https://images.example/p2.webp"></body></html>"""
+    p = app.page_from_html("https://shop.example/p", html)
+    assert p["title"] == "Parfum Lavender 50ml | Tokopedia" and p["meta"]["og:title"] == "Parfum Lavender & Musk 50ml"
+    assert "viewport" not in p["meta"] and p["meta"]["description"] == "Wangi kalem" and '"Product"' in p["ld"]
+    assert "Rp179.000 Rp250.000 28%" in p["text"] and "junk" not in p["text"] and p["images"] == ["https://images.example/p2.webp"]
+    assert "https://" in fails(app.fetch_page, "vt.tokopedia.com/t/abc")
+
+
+def test_import_uses_ai_extraction():
+    calls = []
+    real_chat, real_imgs, real_settings = app.zai_chat, app.fetch_images, app.load_settings
+    try:
+        app.load_settings = lambda: {"key": "k", "model": "glm-4.6v"}
+        app.fetch_images = lambda urls, ref: calls.append(urls) or ["data:image/jpeg;base64,AAAA"]
+        app.zai_chat = lambda *a, **k: ('{"is_product_page": true, "name": "Parfum Lavender", "price": "Rp179.000", '
+                                        '"discount": "28%", "images": ["https://images.example/p2.webp", "https://evil/x"]}', "stop")
+        page = {"url": "https://shop.example/p", "title": "t", "meta": {"og:image": "https://images.example/p1.jpg"},
+                "ld": "", "text": "Rp179.000", "images": ["https://images.example/p2.webp"]}
+        r = app.import_product({"page": page})
+        assert r["name"] == "Parfum Lavender" and r["price"] == "Rp179.000" and r["discount"] == "28%"
+        assert calls == [["https://images.example/p2.webp"]] and r["images"] and r["url"] == "https://shop.example/p"
+        app.zai_chat = lambda *a, **k: ('{"is_product_page": false, "name": ""}', "stop")
+        assert "bukan halaman produk" in fails(app.import_product, {"page": page})
+        app.load_settings = lambda: {"key": "", "model": "glm-4.6v"}
+        assert "API key" in fails(app.import_product, {"page": page})
+    finally:
+        app.zai_chat, app.fetch_images, app.load_settings = real_chat, real_imgs, real_settings
 
 
 def test_patterns_and_helpers():
@@ -209,13 +247,10 @@ def test_patterns_and_helpers():
     assert app.JOB_RE.fullmatch("20261008-101010-ab12")
     for job in ("..", "CON", "x/../y", "20261008-101010-ab12/../x"):
         assert not app.JOB_RE.fullmatch(job)
-    assert app.FILE_RE.fullmatch("/hasil/20261008-101010-ab12/cover-1-0123456789.jpg")
-    assert app.ZIP_RE.fullmatch("/hasil/20261008-101010-ab12/paket-2-0123456789.zip")
-    assert not app.FILE_RE.fullmatch("/hasil/20261008-101010-ab12/paket-2-0123456789.zip")
-    assert not app.ZIP_RE.fullmatch("/hasil/20261008-101010-ab12/paket-4-0123456789.zip")
-    assert not app.FILE_RE.fullmatch("/hasil/20261008-101010-ab12/foto1.jpg")
-    assert not app.FILE_RE.fullmatch("/hasil/20261008-101010-ab12/../settings.json")
-    assert not hero.BANNED.search(app.FALLBACK_SCENE)
+    assert app.BRIEF_RE.fullmatch("/hasil/20261008-101010-ab12/brief.txt")
+    assert not app.BRIEF_RE.fullmatch("/hasil/20261008-101010-ab12/pack.json")
+    assert not app.BRIEF_RE.fullmatch("/hasil/../settings.json")
+    assert not app.SCENE_BANNED.search(app.FALLBACK_SCENE) and app.SCENE_BANNED.search("a Bottle on marble")
     assert app.product_info({"product": {"noun": "The Perfume Bottle"}, "hand": "A man's hand"}, "auto")["noun"] == "perfume bottle"
     assert app.product_info({}, "pria")["hand"] == app.HANDS["pria"]
     assert app.sentence("abc") == "Abc." and app.num(2.5) == "2,5" and app.num(24.0) == "24"
@@ -223,24 +258,11 @@ def test_patterns_and_helpers():
 
 def test_settings_and_photos():
     assert app.public({"key": "abcdef1234", "model": "glm-4.6v"})["key_hint"] == "...1234"
-    assert "Foto ke-2" in fails(app.decode_photo, "data:image/jpeg;base64,bm90IGFuIGltYWdl", 2)
-    buf = BytesIO()
-    Image.new("RGB", (4000, 3000), (9, 9, 9)).save(buf, "PNG")
-    img = app.decode_photo("data:image/png;base64," + base64.b64encode(buf.getvalue()).decode(), 1)
-    sent = Image.open(BytesIO(base64.b64decode(app.jpeg_url(img).split(",", 1)[1])))
-    assert img.size == (4000, 3000) and max(sent.size) == 1280
-
-
-def test_rembg_crash_probe():
-    real = app.subprocess.run
-    try:
-        for rc, crash in ((0, False), (1, False), (3221225477, True), (-11, True)):  # 3221225477 = 0xC0000005
-            app.subprocess.run = lambda *a, **k: type("R", (), {"returncode": rc})()
-            app.probe_rembg()
-            assert app._rembg_crash is crash, rc
-        assert app.VC_REDIST in fails(app.rembg_tools)
-    finally:
-        app.subprocess.run, app._rembg_crash = real, False
+    pub = app.public({"key": "", "model": "glm-4.6v"})
+    assert pub["durations"] == app.DURATIONS and ["alasan", "3 Alasan", False, 15] in pub["templates"]
+    assert app.check_photo(JPEG, 1) == JPEG
+    for bad in ("data:image/png;base64,iVBORw0KGgo=", "data:image/jpeg;base64,bm90IGFuIGltYWdl", "x", JPEG + "!"):
+        assert "Foto ke-2" in fails(app.check_photo, bad, 2), bad
 
 
 def test_chat_body():

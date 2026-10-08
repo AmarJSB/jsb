@@ -12,7 +12,7 @@ echo Memasang uv, sekali saja...
 powershell -NoProfile -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 if not exist "%UV%" goto uv_gagal
 :jalan
-echo Menyiapkan TikTok Pack. Pertama kali download sekitar 350 MB, bisa 5-15 menit.
+echo Menyiapkan TikTok Pack. Pertama kali download sekitar 30 MB, biasanya 1-3 menit.
 echo Browser kebuka sendiri kalau sudah siap.
 echo Kalau judul jendela ada tulisan Select, tekan Esc biar lanjut.
 echo.
