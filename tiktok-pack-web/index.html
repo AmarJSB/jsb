@@ -7,7 +7,7 @@
 <style>
   :root {
     --bg: #f4f3f1; --surface: #ffffff; --surface-2: #f7f6f4; --ink: #18181b; --muted: #6b6b73; --line: #e6e4e0;
-    --accent: #fe2c55; --accent-2: #ff5c7c; --accent-ink: #ffffff; --accent-soft: #ffe8ed; --cyan: #10c5c0;
+    --accent: #fe2c55; --accent-2: #ff5c7c; --accent-ink: #ffffff; --accent-soft: #ffe8ed; --cyan: #0fb5b0; --cyan-soft: #dff6f5;
     --ok: #12855a; --ok-soft: #e3f6ec; --warn: #8a5a00; --warn-soft: #fff3d6; --err: #c42b2b; --err-soft: #fde8e8;
     --shadow: 0 1px 2px rgba(20, 20, 30, .05), 0 8px 24px rgba(20, 20, 30, .06);
     --radius: 16px;
@@ -15,7 +15,7 @@
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #0f0f12; --surface: #18181c; --surface-2: #1f1f24; --ink: #f1f1f4; --muted: #9d9da8; --line: #2c2c33;
-      --accent: #ff4d6d; --accent-2: #ff7a92; --accent-ink: #ffffff; --accent-soft: #3a1820; --cyan: #33dcd6;
+      --accent: #ff4d6d; --accent-2: #ff7a92; --accent-ink: #ffffff; --accent-soft: #3a1820; --cyan: #33dcd6; --cyan-soft: #123332;
       --ok: #4ad295; --ok-soft: #12301f; --warn: #ffcf6e; --warn-soft: #33270c; --err: #ff8080; --err-soft: #3a1515;
       --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
     }
@@ -44,21 +44,21 @@
   .brand, .pill { white-space: nowrap; }
   @media (max-width: 560px) { #keyPillText { display: none; } .pill { padding: 12px; } }
 
-  main { max-width: 1160px; margin: 0 auto; padding: 28px 20px 80px; }
+  main { max-width: 1200px; margin: 0 auto; padding: 28px 20px 80px; }
   .intro h1 { margin: 0; font-size: clamp(24px, 3.2vw, 32px); letter-spacing: -.02em; line-height: 1.2; }
-  .intro p { margin: 8px 0 24px; color: var(--muted); max-width: 640px; }
+  .intro p { margin: 8px 0 24px; color: var(--muted); max-width: 680px; }
 
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; }
   .section-head { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; }
   .section-head h2 { margin: 0; font-size: 16px; }
   .section-head .muted { margin-left: auto; }
   .step { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-size: 12px; font-weight: 800;
-    color: var(--accent-ink); background: var(--accent); }
+    color: var(--accent-ink); background: var(--accent); flex: none; }
   .muted { color: var(--muted); font-size: 13px; }
   .gap { height: 22px; }
 
   /* dropzone */
-  .dropzone { position: relative; display: grid; place-items: center; text-align: center; gap: 6px; padding: 30px 16px; cursor: pointer;
+  .dropzone { position: relative; display: grid; place-items: center; text-align: center; gap: 6px; padding: 28px 16px; cursor: pointer;
     border: 2px dashed var(--line); border-radius: 14px; background: var(--surface-2); transition: border-color .15s, background .15s, transform .15s; }
   .dropzone:hover, .dropzone:focus-visible { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); outline: none; }
   body.dragging .dropzone { border-color: var(--accent); background: var(--accent-soft); transform: scale(1.01); }
@@ -70,29 +70,38 @@
   .thumbs:empty { display: none; }
   .thumb { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--surface-2); }
   .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .thumb .num { position: absolute; left: 8px; top: 8px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700;
-    background: rgba(0, 0, 0, .62); color: #fff; }
+  .thumb .num { position: absolute; left: 8px; top: 8px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; background: rgba(0, 0, 0, .62); color: #fff; }
   .thumb .del { position: absolute; right: 8px; top: 8px; width: 28px; height: 28px; border-radius: 50%; border: 0; cursor: pointer;
     background: rgba(0, 0, 0, .62); color: #fff; display: grid; place-items: center; }
   .thumb .del:hover { background: var(--accent); }
 
-  textarea, input[type=password], input[type=text] { width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: 12px;
+  textarea, input[type=password], input[type=text], select { width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: 12px;
     background: var(--surface-2); transition: border-color .15s, box-shadow .15s; }
-  textarea:focus, input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent); }
-  textarea { resize: vertical; min-height: 130px; }
-  .check { display: inline-flex; align-items: center; gap: 10px; margin-top: 12px; cursor: pointer; user-select: none; }
-  .check input { width: 18px; height: 18px; accent-color: var(--accent); }
+  textarea:focus, input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent); }
+  textarea { resize: vertical; min-height: 120px; }
+  .check { display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; cursor: pointer; user-select: none; }
+  .check input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+  .check small { display: block; color: var(--muted); font-size: 12.5px; }
+  .options { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 18px; align-items: start; }
+  @media (max-width: 760px) { .options { grid-template-columns: 1fr; } }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips label { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line);
+    font-size: 13.5px; font-weight: 600; cursor: pointer; background: var(--surface); }
+  .chips input { display: none; }
+  .chips label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .chips label:has(input:disabled) { opacity: .45; cursor: not-allowed; }
+  .label { display: block; font-weight: 700; font-size: 13px; margin: 14px 0 6px; }
 
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: 12px;
     border: 1px solid var(--line); background: var(--surface); font-weight: 600; cursor: pointer; text-decoration: none; color: var(--ink);
-    transition: transform .1s, box-shadow .15s, background .15s; }
+    transition: transform .1s, box-shadow .15s, background .15s; white-space: nowrap; }
   .btn:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
   .btn:active { transform: translateY(1px); }
   .btn.primary { border: 0; color: var(--accent-ink); background: linear-gradient(135deg, var(--accent), var(--accent-2));
     box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 32%, transparent); }
   .btn.big { padding: 14px 26px; font-size: 16px; border-radius: 14px; }
-  .btn.small { padding: 6px 11px; font-size: 13px; border-radius: 9px; }
-  .btn:disabled { opacity: .55; cursor: wait; transform: none; }
+  .btn.small { padding: 5px 11px; font-size: 12.5px; border-radius: 9px; }
+  .btn:disabled, .btn[aria-disabled=true] { opacity: .55; cursor: wait; transform: none; pointer-events: none; }
   .cta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 20px; }
 
   /* progress */
@@ -110,53 +119,108 @@
   .msg:empty { display: none; }
   .msg.err { background: var(--err-soft); color: var(--err); }
   .msg.ok { background: var(--ok-soft); color: var(--ok); }
+  .msg.warn { background: var(--warn-soft); color: var(--warn); }
 
   /* results */
   #result { margin-top: 28px; scroll-margin-top: 80px; }
   .alerts { display: grid; gap: 8px; margin-bottom: 16px; }
   .alert { display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; border-radius: 12px; background: var(--warn-soft); color: var(--warn); font-size: 14px; }
   .alert svg { margin-top: 2px; }
-  .grid { display: grid; grid-template-columns: 370px minmax(0, 1fr); gap: 20px; align-items: start; }
-  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
-  .hero-card { position: sticky; top: 84px; }
-  @media (max-width: 860px) { .hero-card { position: static; } }
-  .hero-box { position: relative; aspect-ratio: 9 / 16; border-radius: 14px; overflow: hidden; background: var(--surface-2);
+  .summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-bottom: 16px; }
+  .summary h2 { margin: 0; font-size: 20px; letter-spacing: -.01em; }
+  .stat { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--muted); }
+  .stat b { color: var(--ink); }
+  .summary .btn { margin-left: auto; }
+  .grid { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .side-card { position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow-y: auto; }  /* laptop 768 px: galeri tetap kejangkau */
+  @media (max-width: 900px) { .side-card { position: static; max-height: none; } }
+  .preview { position: relative; aspect-ratio: 9 / 16; border-radius: 14px; overflow: hidden; background: var(--surface-2);
     display: grid; place-items: center; text-align: center; color: var(--muted); padding: 0 24px; }
-  .hero-box img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-  .hero-box.loading::before { content: ""; position: absolute; inset: 0;
+  .preview img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .preview.square img { object-fit: contain; background: #f0f0f0; }
+  .preview.loading::before { content: ""; position: absolute; inset: 0;
     background: linear-gradient(110deg, transparent 30%, color-mix(in srgb, var(--surface) 70%, transparent) 50%, transparent 70%) var(--surface-2);
     background-size: 220% 100%; animation: shimmer 1.3s linear infinite; }
-  .hero-box.loading span { position: relative; }
-  .hero-box.loading img { opacity: .35; transition: opacity .2s; }
+  .preview.loading span { position: relative; }
+  .preview.loading img { opacity: .35; }
   @keyframes shimmer { to { background-position: -120% 0; } }
-  .hero-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
-  .hero-actions .btn { flex: 1; }
+  .gallery { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  .gallery button { position: relative; padding: 0; border: 2px solid transparent; border-radius: 10px; overflow: hidden; cursor: pointer;
+    aspect-ratio: 9 / 16; background: var(--surface-2); }
+  .gallery button img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .gallery button span { position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 4px; font-size: 10.5px; font-weight: 700; color: #fff;
+    background: linear-gradient(transparent, rgba(0, 0, 0, .75)); text-align: left; }
+  .gallery button.on { border-color: var(--accent); }
+  .asset-meta { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .asset-meta div { min-width: 0; }
+  .asset-meta b { display: block; }
+  .asset-meta .btn { margin-left: auto; }
   details.tune { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
-  details.tune summary { cursor: pointer; font-weight: 700; list-style: none; display: flex; align-items: center; gap: 8px; }
-  details.tune summary::-webkit-details-marker { display: none; }
-  details.tune summary::after { content: "▾"; margin-left: auto; color: var(--muted); }
-  details.tune[open] summary::after { content: "▴"; }
-  .label { display: block; font-weight: 700; font-size: 13px; margin: 14px 0 6px; }
+  details.tune summary, details.more summary { cursor: pointer; font-weight: 700; list-style: none; display: flex; align-items: center; gap: 8px; }
+  details.tune summary::-webkit-details-marker, details.more summary::-webkit-details-marker { display: none; }
+  details.tune summary::after, details.more summary::after { content: "▾"; margin-left: auto; color: var(--muted); }
+  details.tune[open] summary::after, details.more[open] summary::after { content: "▴"; }
   .seg { display: flex; gap: 6px; flex-wrap: wrap; }
   .seg label { padding: 6px 12px; border-radius: 9px; border: 1px solid var(--line); cursor: pointer; font-size: 13px; font-weight: 600; }
   .seg input { display: none; }
-  .seg input:checked + span { color: var(--accent); }
-  .seg label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+  .seg label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
   .stack { display: grid; gap: 16px; }
-  .out-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .out-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .out-head h3 { margin: 0; font-size: 15px; }
-  .out-head .btn { margin-left: auto; }
-  .ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
-  .ico.cyan { background: color-mix(in srgb, var(--cyan) 16%, transparent); color: var(--cyan); }
+  .out-head .btn, .out-head .muted { margin-left: auto; }
+  .ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: none; }
+  .ico.cyan { background: var(--cyan-soft); color: var(--cyan); }
   .text-out { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); white-space: pre-wrap; word-break: break-word; font: inherit; }
-  .sub { font-weight: 700; font-size: 13px; color: var(--muted); margin: 14px 0 6px; display: flex; align-items: center; }
-  .sub .btn { margin-left: auto; }
+  .text-out.prompt { font-size: 13px; max-height: 150px; overflow: auto; }
   ol.steps { margin: 0; padding-left: 20px; }
   ol.steps li { margin: 3px 0; }
-  .checklist { display: grid; gap: 4px; }
+  .checklist { display: grid; gap: 2px; }
   .checklist label { display: flex; gap: 10px; align-items: flex-start; padding: 7px 4px; cursor: pointer; border-radius: 8px; }
   .checklist input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--ok); flex: none; }
   .checklist input:checked + span { color: var(--muted); text-decoration: line-through; }
+
+  /* hooks */
+  .hooks { display: grid; gap: 8px; }
+  .hook { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); cursor: pointer; }
+  .hook input { margin-top: 4px; accent-color: var(--accent); width: 17px; height: 17px; flex: none; }
+  .hook:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+  .hook b { display: block; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .02em;
+    background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); text-transform: uppercase; vertical-align: middle; }
+  .tag.rec { background: var(--cyan-soft); color: var(--cyan); border-color: transparent; }
+  .tag.ai { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+  .tag.r-rendah { color: var(--ok); }
+  .tag.r-sedang { color: var(--warn); }
+  .tag.r-tinggi { color: var(--err); }
+
+  /* storyboard */
+  .shots { display: grid; gap: 0; }
+  .shot { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 14px; padding: 16px 0; border-top: 1px solid var(--line); }
+  .shot:first-child { border-top: 0; padding-top: 0; }
+  .shot-thumb { position: relative; width: 74px; aspect-ratio: 9 / 16; border-radius: 10px; overflow: hidden; background: var(--surface-2);
+    display: grid; place-items: center; color: var(--muted); font-size: 11px; text-align: center; }
+  .shot-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .shot-thumb.rec { background: var(--cyan-soft); color: var(--cyan); }
+  .shot-thumb svg { width: 26px; height: 26px; }
+  .shot-time { position: absolute; left: 4px; top: 4px; padding: 1px 6px; border-radius: 6px; font-size: 10.5px; font-weight: 800; background: rgba(0, 0, 0, .65); color: #fff; z-index: 1; }
+  .shot-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+  .shot-head h4 { margin: 0; font-size: 15px; }
+  .shot-beat { color: var(--muted); font-size: 13px; }
+  .lines { display: grid; gap: 6px; margin-top: 8px; }
+  .line { display: flex; gap: 10px; align-items: baseline; font-size: 14px; }
+  .line .k { flex: none; width: 82px; color: var(--muted); font-size: 12.5px; font-weight: 700; }
+  .line .v { min-width: 0; }
+  .line .say { font-style: italic; }
+  .how { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-size: 13.5px; }
+  .sub { font-weight: 700; font-size: 12.5px; color: var(--muted); margin: 10px 0 6px; display: flex; align-items: center; gap: 8px; }
+  .sub .btn { margin-left: auto; }
+  @media (max-width: 560px) {
+    .card { padding: 16px; }
+    .shot { grid-template-columns: 54px minmax(0, 1fr); gap: 10px; }
+    .shot-thumb { width: 54px; }
+    .line { flex-direction: column; gap: 0; }
+  }
 
   /* settings dialog */
   dialog { width: min(520px, calc(100vw - 32px)); padding: 0; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); color: var(--ink); box-shadow: 0 24px 60px rgba(0, 0, 0, .3); }
@@ -195,8 +259,8 @@
 
 <main>
   <section class="intro">
-    <h1>Foto seller jadi konten afiliasi siap posting</h1>
-    <p>Masukin foto produk dan deskripsi dari seller. Kamu dapet hero image 9:16 pakai produk asli, prompt video Google Flow, caption, hashtag, teks layar, dan naskah voice-over.</p>
+    <h1>Foto seller jadi video afiliasi yang bikin betah nonton</h1>
+    <p>Kamu dapet storyboard shot-per-shot (yang kamu rekam sendiri + klip AI Google Flow dari foto produk asli), 5 pilihan hook, naskah voice-over, caption, cover, dan semua aset gambarnya.</p>
   </section>
 
   <section class="card">
@@ -205,7 +269,7 @@
       <span class="dz-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></span>
       <span class="dz-title">Tarik foto ke sini</span>
       <span class="muted">atau klik buat pilih file &nbsp;·&nbsp; <kbd>Ctrl</kbd> + <kbd>V</kbd> buat tempel gambar</span>
-      <span class="muted">JPG, PNG, WebP · maksimal 3 foto</span>
+      <span class="muted">JPG, PNG, WebP · maksimal 3 foto (depan, samping, detail)</span>
     </div>
     <input id="files" type="file" accept="image/*" multiple hidden>
     <div id="thumbs" class="thumbs"></div>
@@ -213,7 +277,20 @@
     <div class="gap"></div>
     <div class="section-head"><span class="step">2</span><h2>Deskripsi dari seller</h2></div>
     <textarea id="desc" placeholder="Copy-paste deskripsi produk dari listing seller: merek, nama, ukuran, notes aroma, nomor BPOM..."></textarea>
-    <label class="check"><input id="tried" type="checkbox"><span>Aku udah pernah pakai produk ini</span></label>
+
+    <div class="gap"></div>
+    <div class="section-head"><span class="step">3</span><h2>Gaya video</h2></div>
+    <div class="options">
+      <div>
+        <div id="styles" class="chips"></div>
+        <label class="check"><input id="hasProduct" type="checkbox"><span>Aku pegang produknya <small>Bisa rekam shot nyata: ambil, semprot, ukuran di tangan, kemasan.</small></span></label>
+        <label class="check"><input id="tried" type="checkbox"><span>Aku udah pernah pakai produk ini <small>Boleh cerita pengalaman pribadi di naskah.</small></span></label>
+      </div>
+      <div>
+        <span class="label" style="margin-top:0">Tangan di shot AI</span>
+        <select id="hand"><option value="auto">Otomatis</option><option value="wanita">Tangan wanita</option><option value="pria">Tangan pria</option></select>
+      </div>
+    </div>
 
     <div class="cta">
       <button id="go" class="btn primary big" type="button">
@@ -223,8 +300,8 @@
       <span class="muted"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></span>
     </div>
     <div id="progress" class="progress" hidden>
-      <span class="pstep" data-step="1"><span class="dot"></span>Baca foto &amp; nulis teks</span>
-      <span class="pstep" data-step="2"><span class="dot"></span>Bikin hero image</span>
+      <span class="pstep" data-step="1"><span class="dot"></span>Baca foto &amp; susun storyboard</span>
+      <span class="pstep" data-step="2"><span class="dot"></span>Bikin aset gambar</span>
       <span id="elapsed" class="muted"></span>
     </div>
     <p id="status" class="msg"></p>
@@ -232,25 +309,34 @@
 
   <section id="result" hidden>
     <div id="warnings" class="alerts"></div>
+    <div class="card summary">
+      <div>
+        <h2 id="sumTitle"></h2>
+        <div class="muted" id="sumKeyword"></div>
+      </div>
+      <span class="stat" id="sumStats"></span>
+      <a id="zip" class="btn primary" aria-disabled="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16"/></svg>Download semua (.zip)
+      </a>
+    </div>
     <div class="grid">
-      <aside class="card hero-card">
-        <div class="out-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2"/></svg></span><h3>Hero image 9:16</h3></div>
-        <div id="heroBox" class="hero-box"><img id="heroImg" alt="Hero image" hidden><span id="heroEmpty">Belum ada gambar</span></div>
-        <div class="hero-actions">
-          <a id="download" class="btn primary" hidden>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16"/></svg>Download
-          </a>
+      <aside class="card side-card">
+        <div class="out-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></span><h3>Aset gambar</h3><span class="muted" id="assetCount"></span></div>
+        <div id="preview" class="preview"><img id="previewImg" alt="" hidden><span id="previewEmpty">Belum ada gambar</span></div>
+        <div class="asset-meta" id="assetMeta" hidden>
+          <div><b id="assetName"></b><span class="muted" id="assetUse"></span></div>
+          <a id="assetDl" class="btn small">Download</a>
         </div>
-        <p id="heroStatus" class="msg"></p>
+        <div id="gallery" class="gallery"></div>
+        <p id="assetStatus" class="msg"></p>
         <details class="tune">
           <summary>Atur ulang gambar</summary>
           <span class="label">Foto yang dipakai</span>
           <div id="photoSeg" class="seg"></div>
           <span class="label">Scene background (bahasa Inggris)</span>
           <textarea id="scene" rows="3" style="min-height:84px"></textarea>
-          <div class="hero-actions"><button id="regen" class="btn" type="button">Ulang gambar</button></div>
-          <p class="muted">Scene baru = background baru (±$0.015). Scene sama + foto lain = gratis.<br>
-            Cek: cuma 1 produk, gak ada botol/tulisan tambahan, gak ada yang kepotong.</p>
+          <div class="cta" style="margin-top:12px"><button id="regen" class="btn" type="button">Bikin ulang aset</button></div>
+          <p class="muted">Scene baru = background baru (±$0.015). Scene sama + foto lain = gratis. Cek: cuma 1 produk, gak ada botol/tulisan tambahan, gak ada yang kepotong.</p>
         </details>
       </aside>
       <div id="texts" class="stack"></div>
@@ -281,7 +367,7 @@
     </div>
     <div class="dlg-foot">
       <a href="https://z.ai" target="_blank" rel="noopener">Ambil API key di z.ai ↗</a>
-      <button id="save" class="btn primary" type="submit" value="save">Simpan &amp; cek key</button>
+      <button id="save" class="btn primary" type="submit">Simpan &amp; cek key</button>
     </div>
   </form>
 </dialog>
@@ -291,7 +377,7 @@
 <script>
 const $ = (id) => document.getElementById(id);
 const MAX_PHOTOS = 3;
-let photos = [], job = null, settings = null, keyChecked = false, toastTimer;
+let photos = [], settings = null, keyChecked = false, toastTimer, pack = null, assets = {}, current = "cover";
 
 async function api(path, body) {
   const opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
@@ -302,84 +388,80 @@ async function api(path, body) {
   if (!res.ok || data.error) throw new Error(data.error || `Error ${res.status}`);
   return data;
 }
-
 function toast(text) {
-  const t = $("toast");
-  t.textContent = text; t.hidden = false;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, 2200);
+  const t = $("toast"); t.textContent = text; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2200);
 }
-
 function setMsg(el, text, kind = "err") { el.textContent = text || ""; el.className = `msg ${kind}`; }
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 
-/* ---------- settings ---------- */
+/* ---------- pengaturan ---------- */
 function showSettings(s) {
   settings = s;
-  const pill = $("keyPill");
-  pill.className = "pill " + (s.has_key ? (keyChecked ? "ok" : "") : "warn");
+  $("keyPill").className = "pill " + (s.has_key ? (keyChecked ? "ok" : "") : "warn");
   $("keyPillText").textContent = !s.has_key ? "Belum ada API key" : keyChecked ? `z.ai terhubung · ${s.key_hint}` : `Key tersimpan · ${s.key_hint}`;
   $("keyHint").textContent = s.has_key ? `Key tersimpan: ${s.key_hint}. Kosongin kolom ini kalau gak mau ganti key.` : "Belum ada key. Bikin di z.ai, menu API Keys.";
   $("models").replaceChildren(...s.models.map(([id, name, desc]) => {
-    const label = document.createElement("label"); label.className = "model";
-    const radio = document.createElement("input"); radio.type = "radio"; radio.name = "model"; radio.value = id; radio.checked = id === s.model;
-    const text = document.createElement("span"); const b = document.createElement("b"); b.textContent = name;
-    const small = document.createElement("span"); small.className = "muted"; small.textContent = desc;
-    text.append(b, small); label.append(radio, text);
-    return label;
+    const label = el("label", "model"); const r = el("input"); r.type = "radio"; r.name = "model"; r.value = id; r.checked = id === s.model;
+    const t = el("span"); t.append(el("b", "", name), el("span", "muted", desc)); label.append(r, t); return label;
   }));
+  if (!$("styles").childElementCount) drawStyles();
 }
-
+function drawStyles() {
+  const opts = [["auto", "Otomatis (ganti-ganti)", false], ...settings.templates];
+  $("styles").replaceChildren(...opts.map(([id, name, needs]) => {
+    const l = el("label"); const r = el("input"); r.type = "radio"; r.name = "style"; r.value = id; r.checked = id === "auto";
+    r.dataset.needs = needs ? "1" : ""; l.append(r, el("span", "", name + (needs ? " · butuh produk" : ""))); return l;
+  }));
+  syncStyles();
+}
+function syncStyles() {
+  for (const r of document.querySelectorAll('input[name="style"]')) {
+    r.disabled = !!r.dataset.needs && !$("hasProduct").checked;
+    if (r.disabled && r.checked) document.querySelector('input[name="style"][value="auto"]').checked = true;
+  }
+}
+$("hasProduct").onchange = syncStyles;
 function openSettings() {
-  setMsg($("settingsMsg"), "");
-  $("key").value = ""; $("key").type = "password";
-  $("settings").showModal();
-  if (!settings?.has_key) $("key").focus();
+  setMsg($("settingsMsg"), ""); $("key").value = ""; $("key").type = "password";
+  $("settings").showModal(); if (!settings?.has_key) $("key").focus();
 }
 $("openSettings").onclick = openSettings;
 $("keyPill").onclick = openSettings;
+$("closeSettings").onclick = () => $("settings").close();
 $("toggleKey").onclick = () => { $("key").type = $("key").type === "password" ? "text" : "password"; };
 $("pasteKey").onclick = async () => {
   try { $("key").value = (await navigator.clipboard.readText()).trim(); }
   catch { toast("Gak bisa baca clipboard. Tempel manual pakai Ctrl+V."); $("key").focus(); }
 };
-
-$("closeSettings").onclick = () => $("settings").close();
 $("settingsForm").onsubmit = async (e) => {
   e.preventDefault();
   const btn = $("save"); btn.disabled = true;
   setMsg($("settingsMsg"), "Nyimpen & ngecek key ke z.ai...", "ok");
   try {
-    const model = document.querySelector('input[name="model"]:checked')?.value;
     keyChecked = false;
-    showSettings(await api("/api/settings", { key: $("key").value, model }));
+    showSettings(await api("/api/settings", { key: $("key").value, model: document.querySelector('input[name="model"]:checked')?.value }));
     if (!settings.has_key) throw new Error("Tempel API key dulu.");
     await api("/api/check", {});
-    keyChecked = true; showSettings(settings);
-    $("key").value = "";
+    keyChecked = true; showSettings(settings); $("key").value = "";
     setMsg($("settingsMsg"), "Tersimpan. Key aktif dan model bisa dipakai ✓", "ok");
     toast("API key tersimpan ✓");
     setTimeout(() => $("settings").open && $("settings").close(), 900);
-  } catch (err) {
-    setMsg($("settingsMsg"), err.message);
-  } finally { btn.disabled = false; }
+  } catch (err) { setMsg($("settingsMsg"), err.message); }
+  finally { btn.disabled = false; }
 };
-
 api("/api/settings").then((s) => { showSettings(s); if (!s.has_key) openSettings(); })
   .catch((e) => { $("keyPillText").textContent = "Gak nyambung"; setMsg($("status"), e.message); });
 
-/* ---------- photos: klik, drag & drop, Ctrl+V ---------- */
+/* ---------- foto: klik, drag & drop, Ctrl+V ---------- */
 async function toJpeg(file) {  // kecilin di browser (maks 2048 px) biar upload cepat; PNG transparan dikasih latar putih
   const bmp = await createImageBitmap(file);
   const s = Math.min(1, 2048 / Math.max(bmp.width, bmp.height));
-  const c = document.createElement("canvas");
-  c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
-  const ctx = c.getContext("2d");
-  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
-  ctx.drawImage(bmp, 0, 0, c.width, c.height);
-  bmp.close();
+  const c = document.createElement("canvas"); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+  const ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(bmp, 0, 0, c.width, c.height); bmp.close();
   return c.toDataURL("image/jpeg", 0.92);
 }
-
 async function addFiles(list, okText) {
   const files = [...list].filter((f) => f.type.startsWith("image/"));
   if (!files.length) { toast("Itu bukan file gambar."); return; }
@@ -392,24 +474,18 @@ async function addFiles(list, okText) {
   drawThumbs();
   if (problem) toast(problem); else if (added && okText) toast(okText);
 }
-
 function drawThumbs() {
   $("photoCount").textContent = `${photos.length}/${MAX_PHOTOS} foto`;
   $("thumbs").replaceChildren(...photos.map((url, i) => {
-    const box = document.createElement("div"); box.className = "thumb";
-    const img = new Image(); img.src = url; img.alt = `Foto ${i + 1}`;
-    const num = document.createElement("span"); num.className = "num"; num.textContent = `Foto ${i + 1}`;
-    const del = document.createElement("button"); del.className = "del"; del.type = "button"; del.title = "Hapus"; del.textContent = "✕";
+    const box = el("div", "thumb"); const img = new Image(); img.src = url; img.alt = `Foto ${i + 1}`;
+    const del = el("button", "del", "✕"); del.type = "button"; del.title = "Hapus";
     del.onclick = () => { photos.splice(i, 1); drawThumbs(); };
-    box.append(img, num, del);
-    return box;
+    box.append(img, el("span", "num", `Foto ${i + 1}`), del); return box;
   }));
 }
-
 $("drop").onclick = () => $("files").click();
 $("drop").onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("files").click(); } };
 $("files").onchange = async () => { await addFiles($("files").files); $("files").value = ""; };
-
 let dragDepth = 0;
 const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes("Files");
 document.addEventListener("dragenter", (e) => { if (hasFiles(e)) { dragDepth++; document.body.classList.add("dragging"); } });
@@ -423,69 +499,133 @@ document.addEventListener("drop", (e) => {
 document.addEventListener("paste", (e) => {
   const files = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith("image/"));
   if (!files.length || $("settings").open) return;  // teks biasa: biarin ditempel normal
-  e.preventDefault();
-  addFiles(files, "Gambar ditempel ✓");
+  e.preventDefault(); addFiles(files, "Gambar ditempel ✓");
 });
 
 /* ---------- hasil ---------- */
 const ICON = {
   video: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-3v10l-6-3"/></svg>',
   text: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
-  screen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M9 8h6M9 12h6"/></svg>',
   mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m4 12 5 5L20 6"/></svg>',
   warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3 2 21h20zM12 10v5M12 18h.01"/></svg>',
+  bolt: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+  film: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 8h4M3 16h4M17 8h4M17 16h4"/></svg>',
+  cam: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/></svg>',
+  music: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
 };
-function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
-function copyBtn(text) {
-  const b = el("button", "btn small", "Copy"); b.type = "button";
-  b.onclick = () => navigator.clipboard.writeText(text).then(() => { b.textContent = "Ke-copy ✓"; toast("Ke-copy ✓"); }, () => toast("Copy gagal. Blok teksnya lalu Ctrl+C."));
+function copyBtn(text, label = "Copy") {
+  const b = el("button", "btn small", label); b.type = "button";
+  b.onclick = () => navigator.clipboard.writeText(typeof text === "function" ? text() : text)
+    .then(() => { b.textContent = "Ke-copy ✓"; toast("Ke-copy ✓"); setTimeout(() => { b.textContent = label; }, 1800); }, () => toast("Copy gagal. Blok teksnya lalu Ctrl+C."));
   return b;
 }
-function outCard(icon, title, copyText, ...body) {
-  const card = el("div", "card");
-  const head = el("div", "out-head");
-  const ico = el("span", "ico"); ico.innerHTML = ICON[icon];
-  head.append(ico, el("h3", "", title));
-  if (copyText) head.append(copyBtn(copyText));
-  card.append(head, ...body);
-  return card;
+function card(icon, title, extra, ...body) {
+  const c = el("div", "card"); const head = el("div", "out-head"); const ico = el("span", "ico" + (icon === "cam" ? " cyan" : "")); ico.innerHTML = ICON[icon];
+  head.append(ico, el("h3", "", title)); if (extra) head.append(extra); c.append(head, ...body); return c;
 }
-function sub(title, copyText) { const s = el("div", "sub", title); if (copyText) s.append(copyBtn(copyText)); return s; }
-function listOf(tag, cls, items) { const l = el(tag, cls); for (const t of items) l.append(el("li", "", t)); return l; }
+const fmt = (n) => Number(n).toLocaleString("id-ID", { maximumFractionDigits: 1 });
 
 function render(d) {
+  pack = d; assets = {};
   $("result").hidden = false;
   $("warnings").replaceChildren(...d.warnings.map((w) => { const a = el("div", "alert"); a.innerHTML = ICON.warn; a.append(el("span", "", w)); return a; }));
+  const rec = d.shots.filter((s) => s.kind === "rekam").length, c = d.credits;
+  $("sumTitle").textContent = `${d.template.name} · ${fmt(d.template.seconds)} detik`;
+  $("sumKeyword").textContent = d.keyword ? `Keyword: ${d.keyword}` : "";
+  $("sumStats").textContent = `${rec} shot rekam sendiri · ${c.clips} klip AI · ±${c.fast} kredit Flow (Fast) / ${c.lite} (Lite) · gratis 50/hari`;
+  $("zip").setAttribute("aria-disabled", "true"); $("zip").removeAttribute("href");
   $("photoSeg").replaceChildren(...Array.from({ length: d.photos }, (_, i) => {
-    const l = el("label"); const r = el("input"); r.type = "radio"; r.name = "photo"; r.value = i + 1;
-    r.checked = i + 1 === (d.best_photo || 1);
+    const l = el("label"); const r = el("input"); r.type = "radio"; r.name = "photo"; r.value = i + 1; r.checked = i + 1 === (d.best_photo || 1);
     l.append(r, el("span", "", `Foto ${i + 1}`)); return l;
   }));
   $("scene").value = d.scene;
-  $("heroImg").hidden = true; $("download").hidden = true; setMsg($("heroStatus"), "");
-  $("heroEmpty").hidden = false;
-  $("heroEmpty").textContent = d.best_photo ? "Lagi dibikin..." : "Gak ada foto yang cukup bersih. Buka \"Atur ulang gambar\", pilih foto, lalu Ulang gambar kalau tetap mau coba.";
-  $("heroBox").classList.toggle("loading", !!d.best_photo);
-  const p = d.pack, onscreen = p.onscreen.join("\n");
-  const checklist = el("div", "checklist");
-  for (const t of ["Nyalain label konten AI pas posting.", "Pasang link produk dari Showcase (keranjang kuning).",
-    "Cek tiap frame video: label, tutup, warna sama dengan foto asli.", "Ada yang berubah → jangan posting, ulang klipnya.",
-    "Nomor BPOM dicek di cekbpom.pom.go.id: merek & nama produk cocok.", "Pakai suara/footage kamu sendiri, jangan cuma teks + musik."]) {
-    const l = el("label"); const c = el("input"); c.type = "checkbox"; l.append(c, el("span", "", t)); checklist.append(l);
-  }
-  $("texts").replaceChildren(
-    outCard("text", "Caption + hashtag", p.caption, el("pre", "text-out", p.caption)),
-    outCard("video", "Video di Google Flow", null,
-      listOf("ol", "steps", ["Buka Google Flow → Frames to Video.", "Upload hero image sebagai frame awal, rasio 9:16, durasi 8 detik.",
-        "Bikin Clip A dan Clip B pakai prompt di bawah, lalu gabung di CapCut/editor TikTok.",
-        "Botol/label berubah di video? Ulang klipnya, atau pakai foto seller yang bersih sebagai frame awal."]),
-      sub("Clip A", p.flow_a), el("pre", "text-out", p.flow_a), sub("Clip B", p.flow_b), el("pre", "text-out", p.flow_b)),
-    outCard("screen", "Teks layar", onscreen, el("pre", "text-out", onscreen)),
-    outCard("mic", "Naskah VO 15 detik · rekam pakai suara kamu", p.voiceover, el("pre", "text-out", p.voiceover)),
-    outCard("check", "Checklist posting", null, checklist),
-  );
+  drawGallery();
+  drawTexts();
   $("result").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function drawTexts() {
+  const d = pack;
+  const hookList = el("div", "hooks");
+  d.hooks.forEach((h, i) => {
+    const l = el("label", "hook"); const r = el("input"); r.type = "radio"; r.name = "hook";
+    r.checked = d.shots[0]?.vo === h.vo;
+    r.onchange = () => {
+      d.shots[0].text = h.text || d.shots[0].text; d.shots[0].vo = h.vo || d.shots[0].vo;
+      d.vo_script = d.shots.map((s) => s.vo).filter(Boolean).join(" "); d.vo_words = d.vo_script.split(/\s+/).filter(Boolean).length;
+      drawTexts(); toast("Hook dipasang di shot 1 ✓");
+    };
+    const t = el("span"); const top = el("span", "tag", h.type); t.append(top, el("b", "", h.text || "—"), el("span", "muted", `“${h.vo}”`));
+    l.append(r, t); hookList.append(l);
+  });
+  const shots = el("div", "shots");
+  d.shots.forEach((s, i) => shots.append(shotRow(s, i)));
+  const steps = el("ol", "steps"); for (const t of d.capcut) steps.append(el("li", "", t));
+  const checklist = el("div", "checklist");
+  for (const t of d.checklist) { const l = el("label"); const c = el("input"); c.type = "checkbox"; l.append(c, el("span", "", t)); checklist.append(l); }
+  const secs = d.vo_words / 2.3;
+  $("texts").replaceChildren(
+    card("bolt", "Pilih hook (2 detik pertama)", el("span", "muted", "Ganti-ganti tiap video"), hookList),
+    card("film", "Storyboard", el("span", "muted", `${d.shots.length} shot`), shots),
+    card("mic", "Naskah voice-over · suara kamu sendiri", copyBtn(() => pack.vo_script), el("pre", "text-out", d.vo_script),
+      el("p", "muted", `${d.vo_words} kata · ±${fmt(secs)} detik kalau ngomong santai`)),
+    card("text", "Caption + hashtag", copyBtn(d.caption), el("pre", "text-out", d.caption)),
+    card("music", "Cover & musik", null, linePair("Judul cover", d.cover || "—"), linePair("Musik", d.music)),
+    card("video", "Cara edit di CapCut", null, steps),
+    card("check", "Checklist sebelum posting", null, checklist),
+  );
+}
+function linePair(k, v) { const l = el("div", "line"); l.append(el("span", "k", k), el("span", "v", v)); return l; }
+
+function shotRow(s, i) {
+  const row = el("div", "shot");
+  const thumb = el("div", "shot-thumb" + (s.kind === "rekam" ? " rec" : ""));
+  thumb.append(el("span", "shot-time", `${fmt(s.start)}–${fmt(s.end)}s`));
+  if (s.kind === "rekam") { const ic = el("span"); ic.innerHTML = ICON.cam; thumb.append(ic); }
+  else if (assets[s.asset]) { const img = new Image(); img.src = assets[s.asset].url; img.alt = ""; thumb.append(img); }
+  else { const ic = el("span"); ic.innerHTML = ICON.video; thumb.append(ic); }
+  const body = el("div");
+  const head = el("div", "shot-head");
+  head.append(el("h4", "", `${i + 1}. ${s.name}`),
+    el("span", "tag " + (s.kind === "rekam" ? "rec" : "ai"), s.kind === "rekam" ? "Rekam sendiri" : "AI · Flow"));
+  if (s.risk) head.append(el("span", `tag r-${s.risk}`, `risiko ${s.risk}`));
+  body.append(head, el("div", "shot-beat", s.beat));
+  const ls = el("div", "lines");
+  if (s.text) ls.append(linePair("Teks layar", s.text));
+  if (s.vo) { const l = linePair("Ngomong", `“${s.vo}”`); l.lastChild.classList.add("say"); ls.append(l); }
+  body.append(ls);
+  if (s.kind === "rekam") {
+    const how = el("div", "how");
+    if (s.direction) how.append(el("b", "", "Rekam: "), s.direction, el("br"));
+    how.append(el("b", "", "Tips: "), s.steps);
+    body.append(how);
+  } else {
+    body.append(el("div", "how", s.steps));
+    if (s.image_prompt) { body.append(subWithCopy("Prompt gambar (Nano Banana)", s.image_prompt), el("pre", "text-out prompt", s.image_prompt)); }
+    body.append(subWithCopy("Prompt video", s.video_prompt), el("pre", "text-out prompt", s.video_prompt));
+  }
+  row.append(thumb, body);
+  return row;
+}
+function subWithCopy(title, text) { const d = el("div", "sub", title); d.append(copyBtn(text)); return d; }
+
+function drawGallery() {
+  const list = Object.values(assets);
+  $("assetCount").textContent = list.length ? `${list.length} file` : "";
+  $("gallery").replaceChildren(...list.map((a) => {
+    const b = el("button", a.key === current ? "on" : ""); b.type = "button"; b.title = a.label;
+    const img = new Image(); img.src = a.url; img.alt = a.label; b.append(img, el("span", "", a.label));
+    b.onclick = () => { current = a.key; drawGallery(); }; return b;
+  }));
+  const a = assets[current] || list[0];
+  $("previewImg").hidden = !a; $("previewEmpty").hidden = !!a; $("assetMeta").hidden = !a;
+  $("preview").classList.toggle("square", a?.key === "product");
+  if (a) {
+    $("previewImg").src = a.url; $("previewImg").alt = a.label;
+    $("assetName").textContent = `${a.label} · ${a.file}`; $("assetUse").textContent = a.use;
+    $("assetDl").href = a.url; $("assetDl").download = a.file;
+  }
 }
 
 /* ---------- proses ---------- */
@@ -495,34 +635,30 @@ function progress(step) {
   const box = $("progress");
   if (!step) { box.hidden = true; return; }
   box.hidden = false;
-  for (const s of box.querySelectorAll(".pstep")) {
-    const n = +s.dataset.step;
-    s.className = "pstep" + (n < step ? " done" : n === step ? " active" : "");
-  }
-  const t0 = Date.now();
-  $("elapsed").textContent = "0 dtk";
+  for (const s of box.querySelectorAll(".pstep")) { const n = +s.dataset.step; s.className = "pstep" + (n < step ? " done" : n === step ? " active" : ""); }
+  const t0 = Date.now(); $("elapsed").textContent = "0 dtk";
   tick = setInterval(() => { $("elapsed").textContent = `${Math.round((Date.now() - t0) / 1000)} dtk`; }, 1000);
 }
 function lock(on) { $("go").disabled = $("regen").disabled = on; }  // satu proses sekali jalan
 
-async function makeHero(n) {
+async function makeAssets(n) {
   lock(true); progress(2);
-  $("heroBox").classList.add("loading");
-  if ($("heroImg").hidden) { $("heroEmpty").hidden = false; $("heroEmpty").textContent = "Lagi dibikin..."; }
-  setMsg($("heroStatus"), "");
+  $("preview").classList.add("loading");
+  if (!Object.keys(assets).length) { $("previewEmpty").hidden = false; $("previewEmpty").textContent = "Lagi bikin aset..."; }
+  setMsg($("assetStatus"), "");
   try {
-    const d = await api("/api/hero", { job, photo: n, scene: $("scene").value });
-    await new Promise((ok) => { $("heroImg").onload = $("heroImg").onerror = ok; $("heroImg").src = d.url; });
-    $("heroImg").hidden = false; $("heroEmpty").hidden = true;
-    $("download").href = d.url; $("download").download = `tiktok-hero-${job}.jpg`; $("download").hidden = false;
-    if (d.warnings.length) setMsg($("heroStatus"), d.warnings.join(" "));
+    const d = await api("/api/assets", { job: pack.job, photo: n, scene: $("scene").value });
+    assets = Object.fromEntries(d.assets.map((a) => [a.key, a]));
+    if (!assets[current]) current = "cover";
+    drawGallery(); drawTexts();
+    $("zip").href = d.zip; $("zip").download = `tiktok-pack-${pack.job}.zip`; $("zip").removeAttribute("aria-disabled");
+    if (d.warnings.length) setMsg($("assetStatus"), d.warnings.join(" "), "warn");
   } catch (e) {
-    setMsg($("heroStatus"), e.message);
-    if ($("heroImg").hidden) $("heroEmpty").textContent = "Gambar belum jadi.";
-  } finally { $("heroBox").classList.remove("loading"); progress(0); lock(false); }
+    setMsg($("assetStatus"), e.message);
+    if (!Object.keys(assets).length) $("previewEmpty").textContent = "Aset belum jadi.";
+  } finally { $("preview").classList.remove("loading"); progress(0); lock(false); }
 }
-
-$("regen").onclick = () => { if (job) makeHero(+(document.querySelector('input[name="photo"]:checked')?.value || 1)); };
+$("regen").onclick = () => { if (pack) makeAssets(+(document.querySelector('input[name="photo"]:checked')?.value || 1)); };
 
 async function generate() {
   if ($("go").disabled) return;
@@ -532,10 +668,13 @@ async function generate() {
   if (!$("desc").value.trim()) { setMsg($("status"), "Isi deskripsi dari seller dulu."); $("desc").focus(); return; }
   lock(true); progress(1);
   try {
-    const d = await api("/api/analyze", { photos, description: $("desc").value, tried: $("tried").checked });
-    job = d.job;
+    const d = await api("/api/analyze", {
+      photos, description: $("desc").value, tried: $("tried").checked, has_product: $("hasProduct").checked,
+      style: document.querySelector('input[name="style"]:checked')?.value || "auto", hand: $("hand").value,
+    });
     render(d);
-    if (d.best_photo > 0) await makeHero(d.best_photo);
+    if (d.best_photo > 0) await makeAssets(d.best_photo);
+    else $("previewEmpty").textContent = "Gak ada foto yang cukup bersih. Buka \"Atur ulang gambar\", pilih foto, lalu Bikin ulang aset kalau tetap mau coba.";
   } catch (e) { setMsg($("status"), e.message); }
   finally { progress(0); lock(false); }
 }

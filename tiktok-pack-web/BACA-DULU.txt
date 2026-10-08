@@ -1,8 +1,12 @@
 TIKTOK PACK - CARA PAKAI
 ========================
 
-Foto produk + deskripsi seller -> hero image 9:16 (produk asli + background AI),
-prompt Google Flow, caption + hashtag, teks layar, naskah VO, checklist posting.
+Foto produk + deskripsi seller -> paket video TikTok yang tinggal dikerjain:
+- storyboard shot-per-shot: shot yang kamu rekam sendiri + klip AI Google Flow
+  dari foto produk asli (termasuk shot tangan megang produk),
+- 5 pilihan hook, naskah voice-over, caption + hashtag, judul cover, musik,
+- 7 gambar dari produk asli: hero, close-up, siap dipegang, ruang teks,
+  scene kosong, produk referensi, cover TikTok.
 Semua jalan di PC kamu sendiri. Yang dikirim ke internet cuma ke z.ai.
 
 PERTAMA KALI
@@ -19,20 +23,52 @@ PERTAMA KALI
    Saldo z.ai (pay-as-you-go) harus ada isinya.
 
 PEMAKAIAN
-- Masukin 1-3 foto produk: tarik ke kotak foto, tempel pakai Ctrl+V, atau klik
-  buat pilih file. JPG/PNG/WebP; HEIC gak bisa.
-- Tempel deskripsi dari seller, lalu klik "Bikin paket" (atau Ctrl+Enter).
-- Teks muncul duluan, gambar nyusul (total sekitar 30-90 detik).
-- Gambar kurang pas? Buka "Atur ulang gambar", ganti scene atau foto, klik
-  "Ulang gambar".
-- Biaya kira-kira: $0.015 per background baru, teks di bawah $0.01.
+1. Masukin 1-3 foto produk: tarik ke kotak foto, tempel pakai Ctrl+V, atau klik
+   buat pilih file. JPG/PNG/WebP; HEIC gak bisa. Foto terbaik: 1 produk, utuh
+   sampai tutupnya, tajam, tanpa watermark atau tulisan promo.
+2. Tempel deskripsi dari seller (merek, nama, ukuran, notes aroma, nomor BPOM).
+3. Pilih gaya video. "Otomatis" ganti-ganti template tiap video, biar akun kamu
+   gak dianggap posting video yang mirip-mirip.
+   - Centang "Aku pegang produknya" kalau produknya ada di tangan kamu:
+     storyboard nambah shot rekam nyata (ambil, semprot, ukuran, kemasan) dan
+     gaya "Unboxing ASMR" bisa dipilih.
+   - Centang "Aku udah pernah pakai" cuma kalau memang udah: naskah boleh
+     cerita pengalaman pribadi.
+   - "Tangan di shot AI": wanita, pria, atau otomatis.
+4. Klik "Bikin paket" (atau Ctrl+Enter). Storyboard muncul duluan, gambar
+   nyusul. Totalnya sekitar 30-90 detik.
+5. Pilih hook yang paling kamu suka. Shot 1 dan naskah VO ikut ganti.
+6. Klik "Download semua (.zip)": isinya 7 gambar + brief.txt (semua teks dan
+   prompt, bisa dibuka di HP).
+- Gambar kurang pas? Buka "Atur ulang gambar", ganti scene atau foto, lalu klik
+  "Bikin ulang aset".
+
+BIKIN VIDEONYA
+- Shot "REKAM SENDIRI": rekam pakai HP sesuai petunjuk di shot itu.
+- Shot "AI - FLOW": buka Google Flow, ikuti langkah di shot itu (pilih gambar
+  dari zip, tempel prompt, Generate). Shot tangan AI ada 2 langkah: bikin
+  fotonya dulu di Nano Banana, baru dijadiin video.
+- Cek tiap klip AI: label, tutup, warna, dan ukuran harus sama dengan produk
+  asli, jari tangan harus 5. Ada yang berubah -> generate ulang, jangan dipakai.
+- Gabung di CapCut sesuai urutan storyboard, rekam voice-over pakai suara kamu
+  sendiri, tambah teks layar, export 1080p.
+- Kredit Flow: Veo 3.1 Fast 20 kredit per klip, Lite 10 (buat coba-coba).
+  Gratis 50 kredit per hari.
+
+SEBELUM POSTING (lengkapnya ada di checklist aplikasi)
+- Nyalain label konten AI dan pengungkapan konten komersial.
+- Pasang 7-cover.jpg sebagai cover. Link produk lewat keranjang kuning.
+- Musik dari Commercial Music Library TikTok.
+- Cek nomor BPOM di cekbpom.pom.go.id.
+
+BIAYA z.ai
+- Kira-kira $0.015 per background baru, teks di bawah $0.01 per paket.
+- "Bikin ulang aset" dengan scene yang sama + foto lain = gratis.
 - Semua hasil tersimpan di folder data\hasil\.
 
 PENTING
 - Jangan tutup jendela hitam selama dipakai. Tutup jendela = aplikasi berhenti.
 - Kalau judul jendela hitam ada tulisan "Select", tekan Esc.
-- Video tetap kamu bikin manual di Google Flow pakai prompt dari aplikasi.
-- Waktu posting: nyalain label konten AI dan pasang link produk dari Showcase.
 
 KALAU ADA MASALAH
 - "DLL load failed": install Visual C++ Redistributable dari
