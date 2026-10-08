@@ -185,9 +185,9 @@ DEFAULT_MOTION = {
               "creating a seamless loop. Only the camera moves.",
 }
 DEFAULT_EDIT = {
-    "a_hand": "Add one realistic {hand} entering from the bottom edge and holding the {noun} in mid-air at chest height, "
+    "a_hand": "Add one realistic hand entering from the bottom edge and holding the {noun} in mid-air at chest height, "
               "like a casual smartphone product photo; the {noun} is {size}.",
-    "a_spray": "Add one realistic {hand} holding the {noun} upright with the index finger resting on top of the spray "
+    "a_spray": "Add one realistic hand holding the {noun} upright with the index finger resting on top of the spray "
                "nozzle, and the bare wrist of the other arm entering from the side about 10 cm from the nozzle.",
 }
 HANDS = {
@@ -205,9 +205,11 @@ CHECKLIST = [
     "Pasang 7-cover.jpg sebagai cover.",
     "Jangan posting video yang mirip-mirip berturut-turut; ganti template & hook tiap video.",
 ]
+CTA = ("Cek keranjang kuning", "Ukuran sama varian lengkapnya ada di keranjang kuning, ya.")  # kalau CTA dari AI gak ada
 CAPCUT_STEPS = [
     "Generate semua klip AI di Flow (8 detik), download, lalu rekam shot 'rekam sendiri' pakai HP.",
     "CapCut → proyek baru 9:16 → masukin klip sesuai urutan storyboard, potong tiap klip sesuai detiknya.",
+    "Shot 3,5 detik ke atas: kasih zoom pelan atau potong di tengah (jump cut) biar gambar ganti tiap 2-3 detik.",
     "Rekam voice over pakai suara kamu sendiri (naskah VO di bawah), taruh di bawah semua klip.",
     "Tambah teks layar tiap shot di area tengah-atas (jangan di 1/4 bawah & pinggir kanan: ketutup tombol TikTok).",
     "Musik pelan di bawah suara kamu; pilih lagunya nanti di TikTok (Commercial Music Library).",
@@ -256,16 +258,16 @@ audio (English, max 12 words): ambient sound effects only for the AI clips, e.g.
 fx (English, max 12 words): small moving elements from the notes for ambient shots, e.g. "a few rose petals and soft bokeh".
 hand (English, no leading article): the hand for AI hand shots following the hand preference, e.g. "woman's right hand with warm medium-tan skin and short natural nude nails". If the preference is "auto", choose from the product's target (unisex -> woman's hand).
 
-hooks: exactly 5, each a different type from: analogi, pertanyaan, masalah, 3 alasan, notes, ukuran, momen, POV, jujur[[HOOK_EXTRA]]. Each has type, text (on-screen, max 6 words) and vo (spoken by Amar, max 10 words). Every hook names the product or its scent within the first 3 seconds and fits the product. Examples of the style: "Wanginya kayak baru keluar kamar mandi hotel." / "Kamu tim wangi sabun atau tim wangi manis?" / "Naik motor siang-siang, wangimu masih ada?" / "Tiga alasan parfum ini selalu ada di tasku." (the last one only if Amar has used it).
+hooks: exactly 5, each a different type from: analogi, pertanyaan, masalah, 3 alasan, notes, ukuran, momen, POV, jujur[[HOOK_EXTRA]]. Each has type, text (on-screen, max 6 words) and vo (spoken by Amar, max 7 words, said in 2-3 seconds). Every hook names the product or its scent and fits the product. Examples of the style: "Wanginya kayak baru keluar kamar mandi hotel." / "Tim wangi sabun atau wangi manis?" / "Naik motor siang-siang, wangimu masih ada?" / "Tiga alasan parfum ini selalu kubawa." (the last one only if Amar has used it).
 
 shots: exactly one entry per slot, in the same order. For each:
 - code: the FIRST allowed code of that slot that fits (a_spray and r_spray only if atomizer is true).
 - text: on-screen text, max 6 words, that repeats the spoken keyword ("" allowed except slot 1 and the last slot).
 - vo: the spoken line for this slot in Amar's own voice. Slot 1 uses the first hook's vo.
 - motion (only for a_* codes, English, max 40 words): what moves and how the camera moves. The product never moves by itself; use slow motion and small moves. For a_notes describe the scent-note ingredients in macro motion with no product and no people.
-- edit (only for a_hand and a_spray, English, max 35 words): how the hand holds the product in the still image.
+- edit (only for a_hand and a_spray, English, max 30 words): how the hand holds the product in the still image (where it enters, height, angle); do not describe the hand's look, the app adds it.
 - direction (only for r_* codes, Indonesian, max 30 words): exactly what Amar films and says in that shot.
-Pacing: a new visual every 1.5-3 seconds and at least 2 visual events in the first 3 seconds.
+Pacing: keep exactly the given slots (never add, merge or drop one), one idea per slot. Amar adds a punch-in or jump cut inside slots of 3.5 seconds or more, so the visual still changes every 1.5-3 seconds.
 Voice-over: about [[WORDS]] words in total. Flow: hook -> product name + scent family -> notes as everyday Indonesian analogies ("wangi habis mandi", "kemeja baru dicuci") -> when and where to wear it (weather, office, motorbike, kondangan) -> one honest "bukan buat kamu kalau ..." line -> CTA. Say the main keyword in the first 5 seconds.
 The last slot is the CTA: its text and vo point to the "keranjang kuning", e.g. "Ukuran sama varian lengkapnya ada di keranjang kuning." or "Harga terbarunya cek langsung di keranjang kuning, ya."
 
@@ -295,7 +297,12 @@ _rembg_crash = False  # True kalau load rembg bikin Python crash (biasanya VC++ 
 
 
 def text(v):
-    return v.strip() if isinstance(v, str) else "" if v is None else str(v).strip()
+    """String bersih dari jawaban AI: list digabung, None/bool/dict jadi kosong (repr Python jangan sampai bocor)."""
+    if isinstance(v, str):
+        return v.strip()
+    if isinstance(v, list):
+        return ", ".join(lines(v))
+    return "" if v is None or isinstance(v, (bool, dict)) else str(v).strip()
 
 
 def lines(v):
@@ -386,15 +393,17 @@ def zai_chat(model, content, key, max_tokens=8192):
 def parse_reply(reply, finish=None):
     s = re.sub(r"<think>.*?</think>", "", reply or "", flags=re.S)
     s = s.replace("<|begin_of_box|>", "").replace("<|end_of_box|>", "")
-    try:  # strict=False: AI kadang nulis enter mentah di dalam string; jawaban yang diulang di akhir diabaikan
-        obj = json.JSONDecoder(strict=False).raw_decode(s, s.index("{"))[0]
-    except ValueError:
-        obj = None
-    if not isinstance(obj, dict):
-        raise Fail("Jawaban AI kepotong, klik Bikin paket lagi." if finish == "length"
-                   else CHAT_ERRORS["1301"] if finish == "sensitive"
-                   else "Jawaban AI gak kebaca, klik Bikin paket lagi.")
-    return obj
+    dec = json.JSONDecoder(strict=False)  # AI kadang nulis enter mentah di dalam string
+    for m in re.finditer("{", s):  # objek jawaban pertama; kalimat pembuka & jawaban yang diulang di akhir diabaikan
+        try:
+            obj = dec.raw_decode(s, m.start())[0]
+        except ValueError:
+            continue
+        if isinstance(obj, dict) and obj.keys() & {"shots", "hooks", "caption"}:
+            return obj
+    raise Fail("Jawaban AI kepotong, klik Bikin paket lagi." if finish == "length"
+               else CHAT_ERRORS["1301"] if finish == "sensitive"
+               else "Jawaban AI gak kebaca, klik Bikin paket lagi.")
 
 
 def banned_hits(s):
@@ -472,9 +481,9 @@ def rules(code, p):
            f"text and artwork, same size and position in the frame. Its front label faces the camera the entire time. "
            f"The {noun} never rotates, bends, morphs or changes, and it is the only {noun} in the scene.")
     if code in ("a_hand", "a_spray"):
-        out += (f" One {p['hand']} with five natural fingers. The fingers hold the {noun} by its sides and back, the "
-                "thumb rests on its side, and no finger covers the front label. The grip stays exactly the same from "
-                "start to finish; the hand moves only slightly and slowly.")
+        out += (f" Exactly one hand holds the {noun}: a {p['hand']}, with five natural fingers. The fingers hold it "
+                "by its sides and back, the thumb rests on its side, and no finger covers the front label. The grip stays "
+                "exactly the same from start to finish; the hand moves only slightly and slowly.")
     if code == "a_loop":
         out += " The clip ends exactly on the provided last frame."
     return f"{out} {clean}"
@@ -485,8 +494,9 @@ def image_prompt(edit, p):
     label = (f'the label reading "{p["label"]}" with the same font, layout and artwork' if p["label"]
              else "the same label artwork")
     edit = re.sub(r"^edit image 1\.?\s*", "", edit, flags=re.I)
-    return (f"Edit image 1. {sentence(edit)} Natural anatomy: five fingers with visible knuckles and nail beds, natural "
-            f"skin texture, soft contact shadows where skin touches the {p['noun']}. Fingers wrap the sides and back; "
+    return (f"Edit image 1. {sentence(edit)} The hand holding the {p['noun']} is one {p['hand']}. Natural anatomy: five "
+            f"fingers with visible knuckles and nail beds, natural skin texture, soft contact shadows where skin touches the "
+            f"{p['noun']}. Fingers wrap the sides and back; "
             "the thumb rests on the side; no finger, jewelry or shadow covers the front label. Relaxed, steady grip. "
             f"Keep the {p['noun']} exactly as in image 1 and image 2: same shape, same {p['cap']}, same colors, {label}, "
             "same size. Keep the background and lighting of image 1 unchanged. Change only what is described above. "
@@ -496,7 +506,8 @@ def image_prompt(edit, p):
 def product_info(obj, hand_pref):
     pd = obj.get("product") if isinstance(obj.get("product"), dict) else {}
     noun = re.sub(r"^(a|an|the)\s+", "", text(pd.get("noun")).lower())[:40] or "product"
-    hand = re.sub(r"^(a|an|one)\s+", "", text(obj.get("hand")), flags=re.I) or HANDS.get(hand_pref, HANDS["wanita"])
+    # pilihan tangan Amar menang; "auto" = tangan pilihan AI
+    hand = HANDS.get(hand_pref) or re.sub(r"^(a|an|one)\s+", "", text(obj.get("hand")), flags=re.I) or HANDS["wanita"]
     return {
         "noun": noun, "cap": text(pd.get("cap"))[:40] or "cap", "size": text(pd.get("size_cue"))[:40] or "fits in one palm",
         "label": text(pd.get("label_text")).replace('"', "")[:60], "atomizer": pd.get("atomizer") is True,
@@ -508,13 +519,19 @@ def product_info(obj, hand_pref):
 
 
 def build_shots(obj, slots, p, has_product):
-    raw = obj.get("shots") if isinstance(obj.get("shots"), list) else []
+    raw = [s if isinstance(s, dict) else {} for s in obj["shots"]] if isinstance(obj.get("shots"), list) else []
+    if raw and len(raw) != len(slots):  # AI salah hitung slot: isi urut, shot CTA-nya tetap di slot terakhir
+        cta = next((s for s in reversed(raw) if "keranjang" in text(s.get("vo")).lower()), {})
+        body = [s for s in raw if s is not cta][:len(slots) - 1]
+        raw = body + [{}] * (len(slots) - 1 - len(body)) + [cta]
     hooks = obj["hooks"]
     shots, t = [], 0.0
     for i, (beat, sec, cands) in enumerate(slots):
-        s = raw[i] if i < len(raw) and isinstance(raw[i], dict) else {}
+        s = raw[i] if i < len(raw) else {}
         ok = [c for c in cands if available(c, has_product, p["atomizer"])] or ["a_hero"]
         code = s.get("code") if s.get("code") in ok else ok[0]
+        if code != s.get("code"):  # kode diganti: motion/edit/direction AI itu buat shot lain, pakai default
+            s = {"text": s.get("text"), "vo": s.get("vo")}
         name, asset, mode, risk, tips = SHOTS[code]
         overlay, vo = text(s.get("text")), text(s.get("vo"))
         if i == 0 and hooks:  # slot pertama = hook pertama (pilihan hook di UI juga ganti slot ini)
@@ -532,29 +549,39 @@ def build_shots(obj, slots, p, has_product):
                 shot["image_prompt"] = image_prompt(text(s.get("edit")) or DEFAULT_EDIT[code].format(**fill), p)
         shots.append(shot)
         t += sec
+    if shots and "keranjang" not in shots[-1]["vo"].lower():  # CTA wajib ngarah ke keranjang kuning
+        shots[-1]["text"], shots[-1]["vo"] = shots[-1]["text"] or CTA[0], CTA[1]
     return shots
 
 
 def normalize(obj, n, desc, template, slots, has_product, hand_pref="auto"):
     hooks = []
     for h in obj.get("hooks") if isinstance(obj.get("hooks"), list) else []:
+        h = {"text": h, "vo": h} if isinstance(h, str) else h
         if isinstance(h, dict) and (text(h.get("text")) or text(h.get("vo"))):
             hooks.append({"type": text(h.get("type")) or "hook", "text": text(h.get("text")), "vo": text(h.get("vo"))})
     obj["hooks"] = hooks[:5]
-    caption = text(obj.get("caption"))
-    if not caption and not obj["hooks"] and not obj.get("shots"):
+    caption = "\n".join(lines(obj.get("caption"))) if isinstance(obj.get("caption"), list) else text(obj.get("caption"))
+    raw = obj.get("shots") if isinstance(obj.get("shots"), list) else []
+    if not obj["hooks"] and not any(text(s.get("vo")) for s in raw if isinstance(s, dict)):
         raise Fail("Jawaban AI kosong, klik Bikin paket lagi.")
-    best = obj.get("best_photo")
-    best = best if isinstance(best, int) and 0 <= best <= n else 1
+    try:
+        best = 1 if isinstance(obj.get("best_photo"), bool) else int(obj.get("best_photo"))
+    except (TypeError, ValueError):
+        best = 1
+    best = best if 0 <= best <= n else 1
     p = product_info(obj, hand_pref)
     shots = build_shots(obj, slots, p, has_product)
-    tag_list = [t for t in (h.lstrip("#").replace(" ", "") for h in lines(obj.get("hashtags"))[:5]) if t]
+    parts = (re.sub(r"\W", "", x) for item in lines(obj.get("hashtags")) for x in re.split(r"[#,]", item))
+    tag_list = list(dict.fromkeys(t for t in parts if t))[:5]  # "#a #b" dalam satu string juga dipecah
     tags = " ".join("#" + t for t in tag_list)
     vo_script = " ".join(s["vo"] for s in shots if s["vo"])
     seconds = shots[-1]["end"] if shots else 0
     words = len(vo_script.split())
     keyword, cover = text(obj.get("keyword")), text(obj.get("cover"))
     warnings = [] if BPOM_RE.search(desc) else [BPOM_WARNING]
+    if raw and len(raw) != len(slots):
+        warnings.append(f"AI ngasih {len(raw)} shot buat {len(slots)} slot, jadi urutannya disesuaikan. Cek teks & VO tiap shot.")
     copy = [caption, cover, keyword, *(h["text"] + "\n" + h["vo"] for h in obj["hooks"]),
             *(s["text"] + "\n" + s["vo"] + "\n" + s["direction"] for s in shots)]
     hits = banned_hits("\n".join(copy)) + ["#" + t.lower() for t in tag_list if TAG_BAD.search(t)]
@@ -674,17 +701,17 @@ def font(size):
 
 def make_cover(img, title):
     """Cover TikTok: hero (produk asli) + judul besar di zona aman atas (gak ketutup UI & crop grid profil)."""
-    img, words = img.copy(), text(title).upper().split()[:6]
+    img, words = img.copy(), re.sub(r"[^\w\s.,!?&'+-]", "", text(title)).upper().split()  # emoji gak ada di font
     if not words:
         return img
     draw = ImageDraw.Draw(img)
-    for size in (104, 92, 80, 68):
+    for size in (104, 92, 80, 68, 58, 50):  # kecilin sampai muat 2 baris di lebar aman 840 px
         f, rows = font(size), [[]]
         for w in words:
             if rows[-1] and draw.textlength(" ".join(rows[-1] + [w]), font=f) > 840:
                 rows.append([])
             rows[-1].append(w)
-        if len(rows) <= 2:
+        if len(rows) <= 2 and all(draw.textlength(" ".join(r), font=f) <= 840 for r in rows):
             break
     y = 300
     for row in rows:
@@ -710,7 +737,9 @@ def brief(pack, files):
         if s["vo"]:
             out.append(f"   Ngomong: {s['vo']}")
         if s["kind"] == "rekam":
-            out.append(f"   Cara rekam: {s['steps']} {s['direction']}".rstrip())
+            if s["direction"]:
+                out.append(f"   Rekam: {s['direction']}")
+            out.append(f"   Tips: {s['steps']}")
         else:
             out.append(f"   Langkah: {s['steps']}")
             if s["image_prompt"]:
@@ -721,7 +750,7 @@ def brief(pack, files):
             "", "CARA EDIT DI CAPCUT:", *(f"- {c}" for c in CAPCUT_STEPS), "", "CHECKLIST SEBELUM POSTING:",
             *(f"- {c}" for c in CHECKLIST), "", "PERINGATAN:", *(f"- {w}" for w in pack.get("warnings", [])), "",
             "ASET:", *(f"- {f}" for f in files)]
-    return "\r\n".join(out)
+    return "\n".join(out).replace("\r\n", "\n").replace("\n", "\r\n")  # caption juga CRLF, biar Notepad rapi
 
 
 def make_assets(body):
@@ -737,17 +766,27 @@ def make_assets(body):
         raise Fail("Scene background gak boleh kosong.")
     if hero.BANNED.search(scene):
         raise Fail("Scene gak boleh nyebut produk/botol/merek/teks, biar AI gak bikin botol palsu. Tulis lingkungannya aja.")
-    cut, warnings = cutout(hero.load(photo))  # cutout dulu: foto jelek gak buang saldo
     h = hashlib.sha1(scene.encode()).hexdigest()[:10]
-    bg_path = OUT / job / f"bg-{h}.jpg"
+    assets = [{"key": key, "file": fname, "label": label, "use": use, "url": f"/hasil/{job}/{key}-{n}-{h}.jpg"}
+              for key, fname, label, use in ASSETS]
+    zip_name = f"paket-{n}-{h}.zip"
+    result = {"assets": assets, "zip": f"/hasil/{job}/{zip_name}", "warnings": []}
+    if (OUT / job / zip_name).is_file():  # foto + scene sama = hasil sama; jangan timpa file yang lagi di-download
+        return result
+    cut, warnings = cutout(hero.load(photo))  # cutout dulu: foto jelek gak buang saldo
+    bg_path, bg = OUT / job / f"bg-{h}.jpg", None
     if bg_path.is_file():
-        bg = hero.load(bg_path)  # scene sama = background lama, gratis
-    else:
+        try:
+            bg = hero.load(bg_path)  # scene sama = background lama, gratis
+        except Fail:
+            bg_path.unlink(missing_ok=True)  # file rusak (misal PC mati pas nyimpen): bikin ulang
+    if bg is None:
         s = load_settings()
         if not s["key"]:
             raise Fail("Isi API key z.ai dulu di Pengaturan.")
         bg = hero.zai_backdrop(scene, s["key"])
-        bg.save(bg_path, quality=95)
+        bg.save(bg_path.with_suffix(".tmp"), "JPEG", quality=95)
+        os.replace(bg_path.with_suffix(".tmp"), bg_path)
     try:
         pack = json.loads((OUT / job / "pack.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -762,18 +801,16 @@ def make_assets(body):
     imgs["scene"] = ImageOps.fit(bg, (hero.W, hero.H), Image.LANCZOS)
     imgs["product"] = hero.reference(cut)
     imgs["cover"] = make_cover(imgs["hero"], pack.get("cover", ""))
-    assets, files = [], []
-    for key, fname, label, use in ASSETS:
-        name = f"{key}-{n}-{h}.jpg"
-        imgs[key].save(OUT / job / name, quality=95)
-        assets.append({"key": key, "file": fname, "label": label, "use": use, "url": f"/hasil/{job}/{name}"})
-        files.append(fname)
-    zip_name = f"paket-{n}-{h}.zip"
-    with zipfile.ZipFile(OUT / job / zip_name, "w", zipfile.ZIP_DEFLATED) as z:
+    for a in assets:
+        imgs[a["key"]].save(OUT / job / a["url"].rsplit("/", 1)[1], quality=95)
+    tmp = OUT / job / f"{zip_name}.tmp"  # zip ditulis terakhir & atomik: ada zip = semua aset lengkap
+    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
         for a in assets:
             z.write(OUT / job / a["url"].rsplit("/", 1)[1], a["file"])
-        z.writestr("brief.txt", brief(pack, files))
-    return {"assets": assets, "zip": f"/hasil/{job}/{zip_name}", "warnings": warnings}
+        z.writestr("brief.txt", brief(pack, [a["file"] for a in assets]).encode("utf-8-sig"))  # BOM: Notepad lama
+    os.replace(tmp, OUT / job / zip_name)
+    result["warnings"] = warnings
+    return result
 
 
 class Handler(BaseHTTPRequestHandler):

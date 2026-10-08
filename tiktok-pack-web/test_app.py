@@ -9,7 +9,7 @@ import tempfile
 from io import BytesIO
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageChops
 
 import app
 import hero
@@ -68,9 +68,10 @@ def test_storyboard_without_product():
     assert shots[0]["start"] == 0 and shots[-1]["end"] == 24 and shots[1]["start"] == shots[0]["end"]
     hand = shots[0]
     assert hand["kind"] == "ai" and hand["file"] == "3-siap-dipegang.jpg" and "6-produk-referensi.jpg" in hand["steps"]
-    assert hand["image_prompt"].startswith("Edit image 1. Add one realistic woman's right hand")
+    assert hand["image_prompt"].startswith("Edit image 1. Add one realistic hand entering from the bottom edge")
+    assert "The hand holding the perfume bottle is one woman's right hand with warm medium-tan skin" in hand["image_prompt"]
     assert 'the label reading "LAVENDER"' in hand["image_prompt"] and "five fingers" in hand["image_prompt"]
-    assert "One woman's right hand with five natural fingers" in hand["video_prompt"]
+    assert "Exactly one hand holds the perfume bottle: a woman's right hand with warm" in hand["video_prompt"]
     assert "The perfume bottle stays exactly as it appears in the first frame" in shots[1]["video_prompt"]
     assert "Audio: soft room tone and petals only" in shots[1]["video_prompt"]
     assert "No bottles, containers" in shots[2]["video_prompt"] and "stays exactly" not in shots[2]["video_prompt"]
@@ -84,17 +85,49 @@ def test_storyboard_without_product():
 
 def test_codes_are_validated():
     slots = app.resolve_slots("pov", False)
-    bad = reply(shots=[{"code": "r_spray"}, {"code": "a_scene"}, {"code": "a_spray"}, {"code": "a_notes"},
-                       {"code": "r_face"}, {"code": "a_loop"}], hooks=[])
+    bad = reply(shots=[{"code": c, "vo": "x", "motion": f"motion {c}", "direction": f"rekam {c}"}
+                       for c in ("r_spray", "a_scene", "a_spray", "a_notes", "r_face", "a_loop")], hooks=[])
     shots = app.normalize(bad, 1, "x", "pov", slots, False)["shots"]
     assert shots[0]["code"] == "a_hand"  # gak punya produk -> gak bisa rekam semprot
     assert shots[2]["code"] == "a_fx"  # atomizer false -> gak ada shot semprot
+    assert "motion a_spray" not in shots[2]["video_prompt"] and "drift slowly" in shots[2]["video_prompt"]
+    assert shots[1]["video_prompt"].startswith("Motion a_scene.")  # kode sah: motion AI dipakai
     with_spray = reply(product={**reply()["product"], "atomizer": True}, shots=bad["shots"])
     shots = app.normalize(with_spray, 1, "x", "pov", app.resolve_slots("pov", True), True)["shots"]
     assert shots[0]["code"] == "r_pick" and shots[2]["code"] == "a_spray"  # r_spray gak sah di hook; a_spray sah
     shots = app.normalize(reply(shots=[]), 1, "x", "unboxing", app.resolve_slots("unboxing", True), True)["shots"]
     assert [s["code"] for s in shots] == ["r_pack", "r_pick", "r_size", "a_close", "r_face", "a_loop"]
     assert shots[0]["text"] == "Wangi habis mandi"  # slot pertama diisi hook pertama
+
+
+def test_messy_llm_output():
+    slots = app.resolve_slots("review", False)
+    nine = [{"code": c, "text": f"t{i}", "vo": f"v{i}"} for i, c in enumerate(SLOT_CODES + ["a_loop"])]
+    nine[-1]["vo"] = "Cek keranjang kuning ya."
+    r = app.normalize(reply(shots=nine), 1, "x", "review", slots, False)
+    assert r["shots"][-1]["vo"] == "Cek keranjang kuning ya." and r["shots"][6]["vo"] == "v6"
+    assert any("9 shot buat 8 slot" in w for w in r["warnings"])
+    six = reply(shots=nine[:5] + nine[-1:])
+    r = app.normalize(six, 1, "x", "review", slots, False)
+    assert [s["vo"] for s in r["shots"]][3:] == ["v3", "v4", "", "", "Cek keranjang kuning ya."]
+    r = app.normalize(reply(shots=[{"vo": "satu"}]), 1, "x", "review", slots, False)
+    assert r["shots"][-1]["vo"] == app.CTA[1] and r["shots"][-1]["text"] == app.CTA[0]  # CTA cadangan
+    r = app.normalize(reply(caption=["Baris 1", "Baris 2"], cover=False, fx=["petals", "bokeh"], notes=False,
+                            hashtags="#parfum #parfumori, #parfum", hooks=["Wangi kalem"],
+                            product={"noun": "perfume bottle", "label_text": False}), 2, "x", "review", slots, False)
+    assert r["caption"].startswith("Baris 1\nBaris 2\n\n#parfum #parfumori") and r["cover"] == ""
+    assert "petals, bokeh" in r["shots"][3]["video_prompt"]
+    assert "False" not in " ".join(r["warnings"]) + r["shots"][0]["image_prompt"]
+    assert any("#parfumori" in w for w in r["warnings"]) and r["hooks"][0]["vo"] == "Wangi kalem"
+    assert 'label reading' not in r["shots"][0]["image_prompt"]
+    for raw, best in (("2", 2), ("0", 0), (2.0, 2), (True, 1), (None, 1), (9, 1), ("x", 1)):
+        assert app.normalize(reply(best_photo=raw), 2, "x", "review", slots, False)["best_photo"] == best, raw
+    echo = {"best_photo": 1, "hooks": [{"type": "", "text": "", "vo": ""}], "shots": [{"code": "", "vo": ""}], "caption": ""}
+    assert "kosong" in fails(app.normalize, echo, 1, "x", "review", slots, False)
+    r = app.normalize(reply(hand="woman's hand"), 1, "x", "review", slots, False, "pria")
+    assert "man's right hand" in r["shots"][0]["image_prompt"] and "woman" not in r["shots"][0]["image_prompt"]
+    assert app.parse_reply('Ini {rencana}: {"caption": "x"}') == {"caption": "x"}
+    assert "kepotong" in fails(app.parse_reply, '{"hooks": [{"type": "a", "text": "b"}], "capt', "length")
 
 
 def test_warnings_and_lint():
@@ -139,12 +172,15 @@ def test_template_rotation():
 def test_cover_and_brief():
     base = Image.new("RGB", (hero.W, hero.H), (90, 60, 120))
     assert app.make_cover(base, "").tobytes() == base.tobytes()
-    cov = app.make_cover(base, "Wangi habis mandi, kalem banget buat ngantor")
-    assert cov.size == base.size and cov.crop((100, 280, 980, 560)).getcolors(10_000) != [(880 * 280, (90, 60, 120))]
-    assert cov.getpixel((540, 1500)) == (90, 60, 120)  # judul cuma di zona atas
+    for title in ("Wangi habis mandi, kalem banget buat ngantor", "Kemenyan Sandalwood-Patchouli 🔥", "WANGI-WANGIAN"):
+        cov = app.make_cover(base, title)
+        box = ImageChops.difference(cov, base).getbbox()
+        assert box and box[0] >= 110 and box[2] <= 970 and 290 <= box[1] and box[3] <= 560, (title, box)
+        assert cov.getpixel((540, 1500)) == (90, 60, 120)  # judul cuma di zona atas
     r = app.normalize(reply(), 3, "Parfum X", "review", app.resolve_slots("review", False), False)
     txt = app.brief(r, ["1-hero.jpg"])
     assert "\r\n" in txt and "STORYBOARD:" in txt and "Prompt gambar: Edit image 1." in txt and "- 1-hero.jpg" in txt
+    assert txt.count("\n") == txt.count("\r\n") and "Tips: " in txt  # caption juga CRLF
 
 
 def test_patterns_and_helpers():
