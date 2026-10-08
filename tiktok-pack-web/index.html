@@ -6,6 +6,8 @@
 <title>TikTok Pack</title>
 <style>
   :root {
+    color-scheme: light dark;  /* scrollbar & dropdown ikut mode gelap */
+    --accent-text: #c8102e; --cyan-text: #087571;  /* versi gelap buat teks kecil di mode terang (kontras >= 4.5) */
     --bg: #f4f3f1; --surface: #ffffff; --surface-2: #f7f6f4; --ink: #18181b; --muted: #6b6b73; --line: #e6e4e0;
     --accent: #fe2c55; --accent-2: #ff5c7c; --accent-ink: #ffffff; --accent-soft: #ffe8ed; --cyan: #0fb5b0; --cyan-soft: #dff6f5;
     --ok: #12855a; --ok-soft: #e3f6ec; --warn: #8a5a00; --warn-soft: #fff3d6; --err: #c42b2b; --err-soft: #fde8e8;
@@ -15,6 +17,7 @@
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #0f0f12; --surface: #18181c; --surface-2: #1f1f24; --ink: #f1f1f4; --muted: #9d9da8; --line: #2c2c33;
+      --accent-text: #ff4d6d; --cyan-text: #33dcd6;
       --accent: #ff4d6d; --accent-2: #ff7a92; --accent-ink: #ffffff; --accent-soft: #3a1820; --cyan: #33dcd6; --cyan-soft: #123332;
       --ok: #4ad295; --ok-soft: #12301f; --warn: #ffcf6e; --warn-soft: #33270c; --err: #ff8080; --err-soft: #3a1515;
       --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
@@ -87,8 +90,10 @@
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .chips label { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line);
     font-size: 13.5px; font-weight: 600; cursor: pointer; background: var(--surface); }
-  .chips input { display: none; }
-  .chips label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .chips label, .seg label { position: relative; }
+  .chips input, .seg input { position: absolute; opacity: 0; pointer-events: none; }  /* tetap bisa dipilih pakai keyboard */
+  .chips label:has(input:focus-visible), .seg label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .chips label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
   .chips label:has(input:disabled) { opacity: .45; cursor: not-allowed; }
   .label { display: block; font-weight: 700; font-size: 13px; margin: 14px 0 6px; }
 
@@ -122,7 +127,7 @@
   .msg.warn { background: var(--warn-soft); color: var(--warn); }
 
   /* results */
-  #result { margin-top: 28px; scroll-margin-top: 80px; }
+  #result { margin-top: 28px; scroll-margin-top: 80px; overflow-wrap: anywhere; }  /* URL/hashtag panjang gak bikin HP scroll samping */
   .alerts { display: grid; gap: 8px; margin-bottom: 16px; }
   .alert { display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; border-radius: 12px; background: var(--warn-soft); color: var(--warn); font-size: 14px; }
   .alert svg { margin-top: 2px; }
@@ -163,8 +168,7 @@
   details.tune[open] summary::after, details.more[open] summary::after { content: "▴"; }
   .seg { display: flex; gap: 6px; flex-wrap: wrap; }
   .seg label { padding: 6px 12px; border-radius: 9px; border: 1px solid var(--line); cursor: pointer; font-size: 13px; font-weight: 600; }
-  .seg input { display: none; }
-  .seg label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .seg label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
   .stack { display: grid; gap: 16px; }
   .out-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .out-head h3 { margin: 0; font-size: 15px; }
@@ -188,8 +192,8 @@
   .hook b { display: block; }
   .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .02em;
     background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); text-transform: uppercase; vertical-align: middle; }
-  .tag.rec { background: var(--cyan-soft); color: var(--cyan); border-color: transparent; }
-  .tag.ai { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+  .tag.rec { background: var(--cyan-soft); color: var(--cyan-text); border-color: transparent; }
+  .tag.ai { background: var(--accent-soft); color: var(--accent-text); border-color: transparent; }
   .tag.r-rendah { color: var(--ok); }
   .tag.r-sedang { color: var(--warn); }
   .tag.r-tinggi { color: var(--err); }
@@ -238,7 +242,7 @@
   .model input { margin-top: 3px; accent-color: var(--accent); width: 17px; height: 17px; flex: none; }
   .model:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
   .model b { display: block; }
-  a { color: var(--accent); font-weight: 600; }
+  a { color: var(--accent-text); font-weight: 600; }
 
   .toast { position: fixed; left: 50%; bottom: 24px; z-index: 50; transform: translateX(-50%); padding: 11px 18px; border-radius: 12px;
     background: var(--ink); color: var(--bg); font-weight: 600; box-shadow: var(--shadow); animation: up .2s ease-out; }
@@ -304,7 +308,7 @@
       <span class="pstep" data-step="2"><span class="dot"></span>Bikin aset gambar</span>
       <span id="elapsed" class="muted"></span>
     </div>
-    <p id="status" class="msg"></p>
+    <p id="status" class="msg" aria-live="polite"></p>
   </section>
 
   <section id="result" hidden>
@@ -328,7 +332,7 @@
           <a id="assetDl" class="btn small">Download</a>
         </div>
         <div id="gallery" class="gallery"></div>
-        <p id="assetStatus" class="msg"></p>
+        <p id="assetStatus" class="msg" aria-live="polite"></p>
         <details class="tune">
           <summary>Atur ulang gambar</summary>
           <span class="label">Foto yang dipakai</span>
@@ -422,7 +426,9 @@ function syncStyles() {
   }
 }
 $("hasProduct").onchange = syncStyles;
+let closeTimer;
 function openSettings() {
+  clearTimeout(closeTimer);  // timer tutup otomatis dari simpan sebelumnya jangan nutup dialog yang baru dibuka
   setMsg($("settingsMsg"), ""); $("key").value = ""; $("key").type = "password";
   $("settings").showModal(); if (!settings?.has_key) $("key").focus();
 }
@@ -446,7 +452,7 @@ $("settingsForm").onsubmit = async (e) => {
     keyChecked = true; showSettings(settings); $("key").value = "";
     setMsg($("settingsMsg"), "Tersimpan. Key aktif dan model bisa dipakai ✓", "ok");
     toast("API key tersimpan ✓");
-    setTimeout(() => $("settings").open && $("settings").close(), 900);
+    closeTimer = setTimeout(() => $("settings").open && $("settings").close(), 900);
   } catch (err) { setMsg($("settingsMsg"), err.message); }
   finally { btn.disabled = false; }
 };
@@ -468,7 +474,11 @@ async function addFiles(list, okText) {
   let added = 0, problem = "";
   for (const f of files) {
     if (photos.length >= MAX_PHOTOS) { problem = "Maksimal 3 foto. Hapus salah satu dulu."; break; }
-    try { photos.push(await toJpeg(f)); added++; }
+    try {
+      const url = await toJpeg(f);  // dicek lagi: drop + paste barengan bisa lolos cek di atas
+      if (photos.length >= MAX_PHOTOS) { problem = "Maksimal 3 foto. Hapus salah satu dulu."; break; }
+      photos.push(url); added++;
+    }
     catch { problem = `${f.name || "Gambar"} gak bisa dibaca. Pakai JPG/PNG/WebP (HEIC gak bisa).`; }
   }
   drawThumbs();
@@ -479,7 +489,7 @@ function drawThumbs() {
   $("thumbs").replaceChildren(...photos.map((url, i) => {
     const box = el("div", "thumb"); const img = new Image(); img.src = url; img.alt = `Foto ${i + 1}`;
     const del = el("button", "del", "✕"); del.type = "button"; del.title = "Hapus";
-    del.onclick = () => { photos.splice(i, 1); drawThumbs(); };
+    del.onclick = () => { photos.splice(i, 1); drawThumbs(); ($("thumbs").querySelectorAll(".del")[Math.min(i, photos.length - 1)] || $("drop")).focus(); };
     box.append(img, el("span", "num", `Foto ${i + 1}`), del); return box;
   }));
 }
@@ -527,7 +537,9 @@ function card(icon, title, extra, ...body) {
 const fmt = (n) => Number(n).toLocaleString("id-ID", { maximumFractionDigits: 1 });
 
 function render(d) {
-  pack = d; assets = {};
+  pack = d; assets = {}; current = "cover";
+  d.hook = 0; d.done = []; d.shot0 = { ...d.shots[0] };  // shot 1 asli = hook pertama
+  setMsg($("assetStatus"), ""); $("previewEmpty").textContent = "Belum ada gambar";
   $("result").hidden = false;
   $("warnings").replaceChildren(...d.warnings.map((w) => { const a = el("div", "alert"); a.innerHTML = ICON.warn; a.append(el("span", "", w)); return a; }));
   const rec = d.shots.filter((s) => s.kind === "rekam").length, c = d.credits;
@@ -550,11 +562,12 @@ function drawTexts() {
   const hookList = el("div", "hooks");
   d.hooks.forEach((h, i) => {
     const l = el("label", "hook"); const r = el("input"); r.type = "radio"; r.name = "hook";
-    r.checked = d.shots[0]?.vo === h.vo;
-    r.onchange = () => {
-      d.shots[0].text = h.text || d.shots[0].text; d.shots[0].vo = h.vo || d.shots[0].vo;
+    r.checked = i === d.hook;
+    r.onchange = () => {  // sama kayak with_hook() di app.py (brief.txt di zip)
+      d.hook = i; d.shots[0].text = h.text || d.shot0.text; d.shots[0].vo = h.vo || d.shot0.vo;
       d.vo_script = d.shots.map((s) => s.vo).filter(Boolean).join(" "); d.vo_words = d.vo_script.split(/\s+/).filter(Boolean).length;
-      drawTexts(); toast("Hook dipasang di shot 1 ✓");
+      drawTexts(); setZip(); toast("Hook dipasang di shot 1 ✓");
+      $("texts").querySelector('input[name="hook"]:checked')?.focus();
     };
     const t = el("span"); const top = el("span", "tag", h.type); t.append(top, el("b", "", h.text || "—"), el("span", "muted", `“${h.vo}”`));
     l.append(r, t); hookList.append(l);
@@ -563,7 +576,10 @@ function drawTexts() {
   d.shots.forEach((s, i) => shots.append(shotRow(s, i)));
   const steps = el("ol", "steps"); for (const t of d.capcut) steps.append(el("li", "", t));
   const checklist = el("div", "checklist");
-  for (const t of d.checklist) { const l = el("label"); const c = el("input"); c.type = "checkbox"; l.append(c, el("span", "", t)); checklist.append(l); }
+  d.checklist.forEach((t, i) => {  // centang disimpan di pack: gak ilang pas storyboard digambar ulang
+    const l = el("label"); const c = el("input"); c.type = "checkbox"; c.checked = !!d.done[i]; c.onchange = () => { d.done[i] = c.checked; };
+    l.append(c, el("span", "", t)); checklist.append(l);
+  });
   const secs = d.vo_words / 2.3;
   $("texts").replaceChildren(
     card("bolt", "Pilih hook (2 detik pertama)", el("span", "muted", "Ganti-ganti tiap video"), hookList),
@@ -616,7 +632,7 @@ function drawGallery() {
   $("gallery").replaceChildren(...list.map((a) => {
     const b = el("button", a.key === current ? "on" : ""); b.type = "button"; b.title = a.label;
     const img = new Image(); img.src = a.url; img.alt = a.label; b.append(img, el("span", "", a.label));
-    b.onclick = () => { current = a.key; drawGallery(); }; return b;
+    b.onclick = () => { current = a.key; drawGallery(); $("gallery").querySelector(".on")?.focus(); }; return b;
   }));
   const a = assets[current] || list[0];
   $("previewImg").hidden = !a; $("previewEmpty").hidden = !!a; $("assetMeta").hidden = !a;
@@ -640,6 +656,9 @@ function progress(step) {
   tick = setInterval(() => { $("elapsed").textContent = `${Math.round((Date.now() - t0) / 1000)} dtk`; }, 1000);
 }
 function lock(on) { $("go").disabled = $("regen").disabled = on; }  // satu proses sekali jalan
+function setZip() {  // zip dibikin server pas di-download, brief.txt-nya ikut hook pilihan
+  if (pack?.zip) { $("zip").href = `${pack.zip}?hook=${pack.hook}`; $("zip").download = `tiktok-pack-${pack.job}.zip`; $("zip").removeAttribute("aria-disabled"); }
+}
 
 async function makeAssets(n) {
   lock(true); progress(2);
@@ -651,7 +670,7 @@ async function makeAssets(n) {
     assets = Object.fromEntries(d.assets.map((a) => [a.key, a]));
     if (!assets[current]) current = "cover";
     drawGallery(); drawTexts();
-    $("zip").href = d.zip; $("zip").download = `tiktok-pack-${pack.job}.zip`; $("zip").removeAttribute("aria-disabled");
+    pack.zip = d.zip; setZip();
     if (d.warnings.length) setMsg($("assetStatus"), d.warnings.join(" "), "warn");
   } catch (e) {
     setMsg($("assetStatus"), e.message);
@@ -667,6 +686,7 @@ async function generate() {
   if (!photos.length) { setMsg($("status"), "Tambahin minimal 1 foto produk dulu."); return; }
   if (!$("desc").value.trim()) { setMsg($("status"), "Isi deskripsi dari seller dulu."); $("desc").focus(); return; }
   lock(true); progress(1);
+  $("result").hidden = true;  // hasil lama jangan kecampur sama foto/deskripsi baru
   try {
     const d = await api("/api/analyze", {
       photos, description: $("desc").value, tried: $("tried").checked, has_product: $("hasProduct").checked,
@@ -675,11 +695,14 @@ async function generate() {
     render(d);
     if (d.best_photo > 0) await makeAssets(d.best_photo);
     else $("previewEmpty").textContent = "Gak ada foto yang cukup bersih. Buka \"Atur ulang gambar\", pilih foto, lalu Bikin ulang aset kalau tetap mau coba.";
-  } catch (e) { setMsg($("status"), e.message); }
+  } catch (e) { setMsg($("status"), e.message); $("status").scrollIntoView({ block: "nearest" }); }
   finally { progress(0); lock(false); }
 }
 $("go").onclick = generate;
-document.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !$("settings").open) generate(); });
+document.addEventListener("keydown", (e) => {  // Ctrl+Enter di kolom scene hasil jangan bikin paket baru (bayar lagi)
+  if (e.key !== "Enter" || !(e.ctrlKey || e.metaKey) || $("settings").open || $("result").contains(e.target)) return;
+  e.preventDefault(); generate();
+});
 </script>
 </body>
 </html>

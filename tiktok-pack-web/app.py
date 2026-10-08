@@ -25,6 +25,7 @@ import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
 from pathlib import Path
+from urllib.parse import parse_qs
 
 import truststore
 
@@ -50,8 +51,8 @@ MODELS = [  # [id, nama, keterangan]
 MODEL_IDS = [m[0] for m in MODELS]
 MAX_BODY = 60 * 1024 * 1024
 JOB_RE = re.compile(r"\d{8}-\d{6}-[0-9a-f]{4}")
-FILE_RE = re.compile(r"/hasil/(\d{8}-\d{6}-[0-9a-f]{4})/((?:hero|close|hand|side|scene|product|cover)-[1-3]-[0-9a-f]{10}"
-                     r"\.jpg|paket-[1-3]-[0-9a-f]{10}\.zip)")
+FILE_RE = re.compile(r"/hasil/(\d{8}-\d{6}-[0-9a-f]{4})/((?:hero|close|hand|side|scene|product|cover)-[1-3]-[0-9a-f]{10}\.jpg)")
+ZIP_RE = re.compile(r"/hasil/(\d{8}-\d{6}-[0-9a-f]{4})/paket-([1-3])-([0-9a-f]{10})\.zip")
 BPOM_RE = re.compile(r"\bN[A-E][\s.-]?\d{11}\b", re.I)
 # Kata/klaim yang bikin konten kena BPOM, aturan TikTok Shop (klaim, merek lain, arahin keluar platform), atau
 # urgensi palsu. Cuma jadi peringatan: Amar yang mutusin.
@@ -769,10 +770,9 @@ def make_assets(body):
     h = hashlib.sha1(scene.encode()).hexdigest()[:10]
     assets = [{"key": key, "file": fname, "label": label, "use": use, "url": f"/hasil/{job}/{key}-{n}-{h}.jpg"}
               for key, fname, label, use in ASSETS]
-    zip_name = f"paket-{n}-{h}.zip"
-    result = {"assets": assets, "zip": f"/hasil/{job}/{zip_name}", "warnings": []}
-    if (OUT / job / zip_name).is_file():  # foto + scene sama = hasil sama; jangan timpa file yang lagi di-download
-        return result
+    result = {"assets": assets, "zip": f"/hasil/{job}/paket-{n}-{h}.zip", "warnings": []}
+    if all((OUT / job / a["url"].rsplit("/", 1)[1]).is_file() for a in assets):
+        return result  # foto + scene sama = hasil sama; jangan timpa file yang mungkin lagi di-download
     cut, warnings = cutout(hero.load(photo))  # cutout dulu: foto jelek gak buang saldo
     bg_path, bg = OUT / job / f"bg-{h}.jpg", None
     if bg_path.is_file():
@@ -787,10 +787,6 @@ def make_assets(body):
         bg = hero.zai_backdrop(scene, s["key"])
         bg.save(bg_path.with_suffix(".tmp"), "JPEG", quality=95)
         os.replace(bg_path.with_suffix(".tmp"), bg_path)
-    try:
-        pack = json.loads((OUT / job / "pack.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        pack = {}
     glossy, imgs, zoom = bool(hero.GLOSSY.search(scene)), {}, 0
     for key in ("hero", "close", "hand", "side"):
         imgs[key], scale = hero.composite(bg, cut, key, glossy=glossy)
@@ -800,17 +796,45 @@ def make_assets(body):
                         "besar kalau ada.")
     imgs["scene"] = ImageOps.fit(bg, (hero.W, hero.H), Image.LANCZOS)
     imgs["product"] = hero.reference(cut)
-    imgs["cover"] = make_cover(imgs["hero"], pack.get("cover", ""))
-    for a in assets:
-        imgs[a["key"]].save(OUT / job / a["url"].rsplit("/", 1)[1], quality=95)
-    tmp = OUT / job / f"{zip_name}.tmp"  # zip ditulis terakhir & atomik: ada zip = semua aset lengkap
-    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
-        for a in assets:
-            z.write(OUT / job / a["url"].rsplit("/", 1)[1], a["file"])
-        z.writestr("brief.txt", brief(pack, [a["file"] for a in assets]).encode("utf-8-sig"))  # BOM: Notepad lama
-    os.replace(tmp, OUT / job / zip_name)
+    imgs["cover"] = make_cover(imgs["hero"], load_pack(job).get("cover", ""))
+    for a in assets:  # atomik: file yang ada = file utuh (cache di atas ngandelin ini)
+        path = OUT / job / a["url"].rsplit("/", 1)[1]
+        imgs[a["key"]].save(path.with_suffix(".tmp"), "JPEG", quality=95)
+        os.replace(path.with_suffix(".tmp"), path)
     result["warnings"] = warnings
     return result
+
+
+def load_pack(job):
+    try:
+        return json.loads((OUT / job / "pack.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def with_hook(pack, i):
+    """Pack dengan hook ke-i di shot 1, sama kayak pilihan hook di UI."""
+    hooks, shots = pack.get("hooks") or [], pack.get("shots") or []
+    if not 0 <= i < len(hooks) or not shots:
+        return pack
+    first = {**shots[0], "text": hooks[i]["text"] or shots[0]["text"], "vo": hooks[i]["vo"] or shots[0]["vo"]}
+    shots = [first, *shots[1:]]
+    vo = " ".join(s["vo"] for s in shots if s["vo"])
+    return {**pack, "shots": shots, "vo_script": vo, "vo_words": len(vo.split())}
+
+
+def zip_bytes(job, n, h, hook):
+    """Zip dibikin pas di-download: brief ikut hook pilihan terakhir, gak ada file zip yang bisa basi/ketimpa."""
+    files = [(OUT / job / f"{key}-{n}-{h}.jpg", fname) for key, fname, _, _ in ASSETS]
+    if not all(path.is_file() for path, _ in files):
+        return None
+    buf = BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:  # JPEG udah terkompres, disimpan apa adanya
+        for path, fname in files:
+            z.write(path, fname)
+        txt = brief(with_hook(load_pack(job), hook), [f for _, f in files])
+        z.writestr("brief.txt", txt.encode("utf-8-sig"), zipfile.ZIP_DEFLATED)  # BOM: biar Notepad lama gak kacau
+    return buf.getvalue()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -843,8 +867,12 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, public(load_settings()))
         m = FILE_RE.fullmatch(path)
         if m and (OUT / m[1] / m[2]).is_file():
-            return self.send(200, (OUT / m[1] / m[2]).read_bytes(),
-                             "application/zip" if m[2].endswith(".zip") else "image/jpeg")
+            return self.send(200, (OUT / m[1] / m[2]).read_bytes(), "image/jpeg")
+        m = ZIP_RE.fullmatch(path)
+        hook = parse_qs(self.path.partition("?")[2]).get("hook", ["0"])[0]
+        data = m and zip_bytes(m[1], m[2], m[3], int(hook) if hook.isdigit() else 0)
+        if data:
+            return self.send(200, data, "application/zip")
         self.send(404, {"error": "Gak ketemu."})
 
     def do_POST(self):

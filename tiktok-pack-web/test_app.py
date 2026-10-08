@@ -6,6 +6,7 @@
 import base64
 import json
 import tempfile
+import zipfile
 from io import BytesIO
 from pathlib import Path
 
@@ -152,6 +153,26 @@ def test_prompt_builder():
     assert "r_pick" not in p and "tes pakai" not in p and "Never write first-person usage" in p
 
 
+def test_zip_follows_hook():
+    old = app.OUT
+    with tempfile.TemporaryDirectory() as d:
+        app.OUT = Path(d)
+        try:
+            job = "20261008-101010-ab12"
+            (Path(d) / job).mkdir()
+            assert app.zip_bytes(job, "1", "0123456789", 0) is None  # aset belum ada
+            for key, _, _, _ in app.ASSETS:
+                Image.new("RGB", (9, 16)).save(Path(d) / job / f"{key}-1-0123456789.jpg")
+            r = app.normalize(reply(), 1, "x", "review", app.resolve_slots("review", False), False)
+            (Path(d) / job / "pack.json").write_text(json.dumps(r), encoding="utf-8")
+            for hook, vo in ((1, "Kamu tim wangi sabun?"), (0, "Wanginya kayak habis mandi."), (99, "Wanginya kayak habis mandi.")):
+                z = zipfile.ZipFile(BytesIO(app.zip_bytes(job, "1", "0123456789", hook)))
+                brief = z.read("brief.txt").decode("utf-8-sig")
+                assert len(z.namelist()) == 8 and f"   Ngomong: {vo}" in brief and brief.split("kata):\r\n")[1].startswith(vo)
+        finally:
+            app.OUT = old
+
+
 def test_template_rotation():
     old = app.OUT
     with tempfile.TemporaryDirectory() as d:
@@ -189,7 +210,9 @@ def test_patterns_and_helpers():
     for job in ("..", "CON", "x/../y", "20261008-101010-ab12/../x"):
         assert not app.JOB_RE.fullmatch(job)
     assert app.FILE_RE.fullmatch("/hasil/20261008-101010-ab12/cover-1-0123456789.jpg")
-    assert app.FILE_RE.fullmatch("/hasil/20261008-101010-ab12/paket-2-0123456789.zip")
+    assert app.ZIP_RE.fullmatch("/hasil/20261008-101010-ab12/paket-2-0123456789.zip")
+    assert not app.FILE_RE.fullmatch("/hasil/20261008-101010-ab12/paket-2-0123456789.zip")
+    assert not app.ZIP_RE.fullmatch("/hasil/20261008-101010-ab12/paket-4-0123456789.zip")
     assert not app.FILE_RE.fullmatch("/hasil/20261008-101010-ab12/foto1.jpg")
     assert not app.FILE_RE.fullmatch("/hasil/20261008-101010-ab12/../settings.json")
     assert not hero.BANNED.search(app.FALLBACK_SCENE)
