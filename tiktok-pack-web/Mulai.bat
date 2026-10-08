@@ -14,6 +14,7 @@ if not exist "%UV%" goto uv_gagal
 :jalan
 echo Menyiapkan TikTok Pack. Pertama kali download sekitar 350 MB, bisa 5-15 menit.
 echo Browser kebuka sendiri kalau sudah siap.
+echo Kalau judul jendela ada tulisan Select, tekan Esc biar lanjut.
 echo.
 "%UV%" run app.py
 echo.

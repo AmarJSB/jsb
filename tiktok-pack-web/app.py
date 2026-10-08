@@ -14,6 +14,7 @@ import json
 import os
 import re
 import secrets
+import subprocess
 import sys
 import threading
 import time
@@ -50,11 +51,14 @@ JOB_RE = re.compile(r"\d{8}-\d{6}-[0-9a-f]{4}")
 FILE_RE = re.compile(r"/hasil/(\d{8}-\d{6}-[0-9a-f]{4})/(hero-[1-3]-[0-9a-f]{10}\.jpg)")
 BPOM_RE = re.compile(r"\bN[A-E][\s.-]?\d{11}\b", re.I)
 BANNED_COPY = re.compile(
-    r"100\s*%|\b(ampuh|dijamin|jaminan|pasti|paling|terlaris|no\.?\s?1|nomor\s?1|feromon|pheromone|dilirik|menggoda"
-    r"|memikat|nempel|24\s?jam|seharian|ori|original|asli|murni|aman|efek samping|bumil|kulit sensitif|mirip|dupe|kw"
-    r"|inspired|terinspirasi|alternatif|diskon|promo|harga|murah|stok)\b",
+    r"100\s*(%|persen)|\brp\s?\d|\b\d+\s?(rb|ribu)\b|\bbest\s?seller|\bbikin\s+(\w+\s+){0,2}(nempel|tertarik|klepek)"
+    r"|\b(ampuh|dijamin|jaminan|pasti|paling|terlaris|no\.?\s?1|nomor\s?1|feromon|pheromone|dilirik|menggoda"
+    r"|memikat|24\s?jam|seharian|ori|original|asli|murni|aman|efek samping|bumil|kulit sensitif|mirip|dupe|kw"
+    r"|inspired|terinspirasi|alternatif|diskon|promo|harga|murah|stok|kehabisan)(nya)?\b",
     re.I,
 )
+TAG_BAD = re.compile(r"murah|original|(ori|asli|kw)$|feromon|pheromone|24jam|seharian|dupe|inspired|diskon|promo"
+                     r"|terlaris|bestseller", re.I)  # hashtag gabungan kayak #parfumori, #parfummurah
 FLOW_END = (
     "The product stays exactly as in the first frame: same shape, cap, colors and label. Gentle camera; the product"
     " keeps facing the camera the whole time. No hands, no people. No speech, no voiceover, no on-screen text."
@@ -81,6 +85,7 @@ FACTS
 - From the seller TEXT only: brand, product name, variant, size (ml), scent notes, the seller's own claims (skip comparisons to other brands). Never take a BPOM number from a photo.
 - From the PHOTOS only appearance: colors, cap, bottle shape, material, spray atomizer or not.
 - Never invent a fact. Unknown -> leave it out.
+- One product per pack: if the photos or the text cover several products/variants, use only the one in best_photo, take only its facts, and say so in notes.
 
 best_photo: number of the cleanest photo: a single product, fully visible including the cap, sharp, no "ORI 100%" badge, price banner, watermark, text overlay or other products. Use 0 if none qualifies and explain why in photo_problem (Indonesian, one sentence).
 
@@ -111,6 +116,7 @@ OUTPUT: reply with ONLY one JSON object, no markdown, exactly these keys:
 Fail = hero.Fail
 _rembg_lock = threading.Lock()
 _rembg = None
+_rembg_crash = False  # True kalau load rembg bikin Python crash (biasanya VC++ runtime lama)
 
 
 def text(v):
@@ -204,12 +210,13 @@ def zai_chat(model, content, key):
 def parse_reply(reply, finish=None):
     s = re.sub(r"<think>.*?</think>", "", reply or "", flags=re.S)
     s = s.replace("<|begin_of_box|>", "").replace("<|end_of_box|>", "")
-    try:
-        obj = json.JSONDecoder().raw_decode(s, s.index("{"))[0]  # jawaban yang diulang di akhir diabaikan
+    try:  # strict=False: AI kadang nulis enter mentah di dalam string; jawaban yang diulang di akhir diabaikan
+        obj = json.JSONDecoder(strict=False).raw_decode(s, s.index("{"))[0]
     except ValueError:
         obj = None
     if not isinstance(obj, dict):
         raise Fail("Jawaban AI kepotong, klik Bikin paket lagi." if finish == "length"
+                   else CHAT_ERRORS["1301"] if finish == "sensitive"
                    else "Jawaban AI gak kebaca, klik Bikin paket lagi.")
     return obj
 
@@ -229,10 +236,12 @@ def normalize(obj, n, desc):
         raise Fail("Jawaban AI kosong, klik Bikin paket lagi.")
     best = obj.get("best_photo")
     best = best if isinstance(best, int) and 0 <= best <= n else 1
-    tags = " ".join("#" + t for t in (h.lstrip("#").replace(" ", "") for h in lines(obj.get("hashtags"))[:5]) if t)
+    tag_list = [t for t in (h.lstrip("#").replace(" ", "") for h in lines(obj.get("hashtags"))[:5]) if t]
+    tags = " ".join("#" + t for t in tag_list)
     onscreen, voiceover = lines(obj.get("onscreen"))[:3], text(obj.get("voiceover"))
     warnings = [] if BPOM_RE.search(desc) else [BPOM_WARNING]
     hits = banned_hits("\n".join([caption, *onscreen, voiceover]))
+    hits += ["#" + t.lower() for t in tag_list if TAG_BAD.search(t)]
     if hits:
         warnings.append(f"Kata berisiko ketemu: {', '.join(hits)}. Ubah dulu sebelum posting.")
     if len(caption) > 300:
@@ -278,18 +287,30 @@ def analyze(body):
     return {"job": job, "photos": len(photos), **normalize(obj, len(photos), desc)}
 
 
+VC_REDIST = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+
+
 def rembg_tools():
     global _rembg
+    if _rembg_crash:
+        raise Fail(f"Pemotong background crash pas dimuat. Install {VC_REDIST}, restart PC, lalu buka Mulai.bat lagi.")
     if _rembg is None:
         try:
             from rembg import new_session, remove
 
             _rembg = remove, new_session("u2net")  # pertama kali download model ±170 MB
         except Exception as e:
-            raise Fail(f"Pemotong background gagal dimuat ({type(e).__name__}). Cek internet. Kalau muncul"
-                       " 'DLL load failed', install https://aka.ms/vs/17/release/vc_redist.x64.exe"
-                       " lalu buka Mulai.bat lagi.") from None
+            raise Fail(f"Pemotong background gagal dimuat ({type(e).__name__}: {e}). Cek internet. Kalau ada"
+                       f" tulisan 'DLL load failed', install {VC_REDIST} lalu buka Mulai.bat lagi.") from None
     return _rembg
+
+
+def probe_rembg():
+    """Load rembg di proses terpisah dulu: VC++ runtime yang ketuaan bikin onnxruntime crash tanpa pesan,
+    dan crash itu jangan sampai ikut matiin server (paket teks tetap harus jalan)."""
+    global _rembg_crash
+    rc = subprocess.run([sys.executable, "-c", "from rembg import new_session; new_session('u2net')"]).returncode
+    _rembg_crash = rc not in (0, 1)  # 1 = error Python biasa (misal internet), ditangani rembg_tools
 
 
 def cutout(img):
@@ -414,6 +435,7 @@ def main():
             webbrowser.open(url)
         return 0
     print("Menyiapkan pemotong background (pertama kali download model sekitar 170 MB)...")
+    probe_rembg()
     try:
         rembg_tools()
     except Fail as e:

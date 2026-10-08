@@ -32,8 +32,10 @@ def test_parse_reply():
     assert app.parse_reply('<|begin_of_box|>{"caption": "x"}<|end_of_box|>') == {"caption": "x"}
     assert app.parse_reply('{"caption": "x"}\n\nJadi jawabannya: {"caption": "y"}') == {"caption": "x"}
     assert app.parse_reply('<think>{"caption": "salah"}</think>{"caption": "x"}') == {"caption": "x"}
+    assert app.parse_reply('{"caption": "Hook!\nCek keranjang"}') == {"caption": "Hook!\nCek keranjang"}  # enter mentah
     assert "gak kebaca" in fails(app.parse_reply, "maaf, gak bisa")
     assert "kepotong" in fails(app.parse_reply, '{"caption": "x', "length")
+    assert "filter" in fails(app.parse_reply, "", "sensitive")
 
 
 def test_normalize():
@@ -50,6 +52,10 @@ def test_normalize():
     w = " | ".join(r["warnings"])
     assert app.BPOM_WARNING in w and "dijamin" in w and "100%" in w and "mirip" in w and "scene netral" in w
     assert "kosong" in fails(app.normalize, {"best_photo": 1}, 1, "x")
+    tags = {**GOOD, "hashtags": ["#parfumori", "#parfummurah", "#parfumlokal", "#original"], "notes": []}
+    w = app.normalize(tags, 1, "NA18201200123")["warnings"]
+    assert len(w) == 1 and "#parfumori" in w[0] and "#parfummurah" in w[0] and "#original" in w[0]
+    assert "#parfumlokal" not in w[0]
 
 
 def test_patterns():
@@ -57,6 +63,11 @@ def test_patterns():
     assert not app.BPOM_RE.search("NA1820")
     assert not app.banned_hits("Kenyamanan dipakai harian, pastikan cek keranjang kuning")
     assert app.banned_hits("tahan 24 jam, bikin dilirik") == ["24 jam", "dilirik"]
+    for risky in ("Cuma Rp59rb aja", "Best seller di toko", "Buruan sebelum kehabisan", "stoknya tinggal dikit",
+                  "100 persen", "bikin cewek auto tertarik"):
+        assert app.banned_hits(risky), risky
+    assert not app.banned_hits("Wanginya nempel di baju. Tertarik? Cek keranjang kuning, 50ml")
+    assert hero.BANNED.search("marble vanity for a luxury fragrance")
     assert not hero.BANNED.search(app.FALLBACK_SCENE)
     for job in ("20261008-101010-ab12",):
         assert app.JOB_RE.fullmatch(job)
@@ -76,6 +87,18 @@ def test_settings_and_photos():
     img = app.decode_photo("data:image/png;base64," + base64.b64encode(buf.getvalue()).decode(), 1)
     sent = Image.open(BytesIO(base64.b64decode(app.jpeg_url(img).split(",", 1)[1])))
     assert img.size == (4000, 3000) and max(sent.size) == 1280
+
+
+def test_rembg_crash_probe():
+    real = app.subprocess.run
+    try:
+        for rc, crash in ((0, False), (1, False), (3221225477, True), (-11, True)):  # 3221225477 = 0xC0000005
+            app.subprocess.run = lambda *a, **k: type("R", (), {"returncode": rc})()
+            app.probe_rembg()
+            assert app._rembg_crash is crash, rc
+        assert app.VC_REDIST in fails(app.rembg_tools)
+    finally:
+        app.subprocess.run, app._rembg_crash = real, False
 
 
 def test_chat_body():

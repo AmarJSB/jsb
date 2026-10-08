@@ -27,7 +27,8 @@ SUFFIX = (
     " soft natural light, photorealistic, vertical composition, no products, no bottles, no containers,"
     " no people, no hands, no text, no letters, no logos, no watermark"
 )
-BANNED = re.compile(r"\b(perfumes?|parfum|bottles?|botol|products?|produk|logos?|labels?|text|brand|merek)\b", re.I)
+BANNED = re.compile(r"\b(perfumes?|parfum|fragrances?|colognes?|flacons?|vials?|atomizers?|bottles?|botol|products?"
+                    r"|produk|logos?|labels?|text|brand|merek)\b", re.I)
 ERRORS = {
     "1301": "z.ai nolak scene ini (filter konten). Ganti kata-kata scene-nya.",
     "1113": "Saldo z.ai habis. Top-up dulu di z.ai.",
