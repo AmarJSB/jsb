@@ -40,10 +40,10 @@ hero.ERRORS["401"] = "API key z.ai ditolak. Cek di Pengaturan."
 DATA = HERE / "data"
 OUT = DATA / "hasil"
 SETTINGS = DATA / "settings.json"
-MODELS = [
-    ["glm-5.3-flash", "GLM-5.3 Flash (default, murah)"],
-    ["glm-4.6v", "GLM-4.6V (vision, lebih mahal)"],
-    ["glm-4.6v-flash", "GLM-4.6V Flash (gratis, kualitas lebih rendah)"],
+MODELS = [  # [id, nama, keterangan]
+    ["glm-5.3-flash", "GLM-5.3 Flash", "Default. Cepat, murah, bisa baca foto."],
+    ["glm-4.6v", "GLM-4.6V", "Model khusus foto. Lebih mahal."],
+    ["glm-4.6v-flash", "GLM-4.6V Flash", "Gratis, tapi kualitas teks lebih rendah."],
 ]
 MODEL_IDS = [m[0] for m in MODELS]
 MAX_BODY = 60 * 1024 * 1024
@@ -178,19 +178,19 @@ def jpeg_url(img):
     return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
-def chat_body(model, content):
-    body = {"model": model, "max_tokens": 8192, "messages": [{"role": "user", "content": content}]}
+def chat_body(model, content, max_tokens=8192):
+    body = {"model": model, "max_tokens": max_tokens, "messages": [{"role": "user", "content": content}]}
     if model.startswith("glm-5"):
         body["reasoning_effort"] = "low"  # GLM-5.x selalu "mikir"; low biar cepat & hemat
     return body
 
 
-def zai_chat(model, content, key):
+def zai_chat(model, content, key, max_tokens=8192):
     import requests
 
     try:
         r = requests.post(BASE + "/chat/completions", headers={"Authorization": f"Bearer {key}"},
-                          json=chat_body(model, content), timeout=(10, 170))
+                          json=chat_body(model, content, max_tokens), timeout=(10, 170))
     except requests.RequestException as e:
         raise Fail(f"Gagal konek ke z.ai ({type(e).__name__}). Cek internet lalu coba lagi.") from None
     try:
@@ -319,6 +319,15 @@ def cutout(img):
         return hero.clean(remove(img, session=session, post_process_mask=True))
 
 
+def check_key(body):
+    """Panggilan teks super kecil buat mastiin key + model jalan (biayanya hampir nol)."""
+    s = load_settings()
+    if not s["key"]:
+        raise Fail("Isi API key z.ai dulu.")
+    zai_chat(s["model"], [{"type": "text", "text": "Balas satu kata: ok"}], s["key"], max_tokens=16)
+    return {"ok": True}
+
+
 def make_hero(body):
     job = text(body.get("job"))
     if not JOB_RE.fullmatch(job) or not (OUT / job).is_dir():
@@ -352,7 +361,7 @@ def make_hero(body):
 
 
 class Handler(BaseHTTPRequestHandler):
-    routes = {"/api/settings": save_settings, "/api/analyze": analyze, "/api/hero": make_hero}
+    routes = {"/api/settings": save_settings, "/api/check": check_key, "/api/analyze": analyze, "/api/hero": make_hero}
 
     def log_message(self, *args):
         pass  # console Windows bisa nge-freeze kalau di-klik (mode Select); jangan banyak print

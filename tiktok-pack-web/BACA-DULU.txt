@@ -13,15 +13,18 @@ PERTAMA KALI
    - Pertama kali download sekitar 350 MB (Python, library, model pemotong
      background). Bisa 5-15 menit tergantung internet.
    - Browser kebuka sendiri. Kalau gak, buka http://127.0.0.1:8765
-4. Di halaman web, buka "Pengaturan z.ai", tempel API key, klik Simpan.
+4. Pertama kali, jendela Pengaturan z.ai muncul sendiri (nanti bisa dibuka lagi
+   lewat ikon roda gigi di kanan atas). Tempel API key, klik "Simpan & cek key".
    API key ambil di z.ai: login -> menu API Keys -> bikin key baru.
    Saldo z.ai (pay-as-you-go) harus ada isinya.
 
 PEMAKAIAN
-- Pilih 1-3 foto produk (JPG/PNG/WebP, maks 15 MB per foto; HEIC gak bisa).
-- Tempel deskripsi dari seller, lalu klik "Bikin paket".
+- Masukin 1-3 foto produk: tarik ke kotak foto, tempel pakai Ctrl+V, atau klik
+  buat pilih file. JPG/PNG/WebP; HEIC gak bisa.
+- Tempel deskripsi dari seller, lalu klik "Bikin paket" (atau Ctrl+Enter).
 - Teks muncul duluan, gambar nyusul (total sekitar 30-90 detik).
-- Gambar kurang pas? Edit scene atau pilih foto lain, klik "Ulang gambar".
+- Gambar kurang pas? Buka "Atur ulang gambar", ganti scene atau foto, klik
+  "Ulang gambar".
 - Biaya kira-kira: $0.015 per background baru, teks di bawah $0.01.
 - Semua hasil tersimpan di folder data\hasil\.
 

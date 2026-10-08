@@ -103,6 +103,7 @@ def test_rembg_crash_probe():
 
 def test_chat_body():
     assert "reasoning_effort" not in app.chat_body("glm-4.6v", [])
+    assert app.chat_body("glm-4.6v", [])["max_tokens"] == 8192 and app.chat_body("glm-4.6v", [], 16)["max_tokens"] == 16
     body = app.chat_body("glm-5.3-flash", [])
     assert body["reasoning_effort"] == "low" and "thinking" not in body and "response_format" not in body
 
