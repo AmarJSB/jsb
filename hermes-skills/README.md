@@ -40,6 +40,24 @@ Videonya kamu bikin sendiri di Flow. Upload ke TikTok dan pasang link produk jug
    - Kirim 1 foto produk dengan caption deskripsi dari seller.
    - Ketik `/tiktok-pack`.
 
+## Pakai profile Hermes (contoh: `affiliatepro` di Windows)
+Tiap profile punya folder sendiri: `%LOCALAPPDATA%\hermes\profiles\<nama>\` (Linux/Mac:
+`~/.hermes/profiles/<nama>/`). Isinya `config.yaml` dan `.env` milik profile itu. Jadi langkah 3 di
+atas dikerjain di profile, bukan di Hermes utama:
+```
+hermes -p affiliatepro config get skills.external_dirs
+hermes -p affiliatepro config set skills.external_dirs '["~/jsb/hermes-skills"]'
+hermes -p affiliatepro gateway restart
+hermes -p affiliatepro skills list
+```
+- Kalau `config get` udah ada isinya, masukin juga ke list `config set`. Perintah itu nimpa
+  list yang lama.
+- Key z.ai harus ada di `.env` profile itu. Pas Hermes jalanin `hero.py`, `HERMES_HOME` otomatis
+  nunjuk ke folder profile.
+- Buat warm-up manual (langkah 4), set dulu `$env:HERMES_HOME =
+  "$env:LOCALAPPDATA\hermes\profiles\affiliatepro"` di PowerShell.
+- Restart gateway juga wajib setelah install `uv`. Di Windows, PATH cuma dibaca pas gateway start.
+
 ## Pemakaian
 - Kirim 1–3 foto sebagai foto biasa (pilih HD, jangan "kirim sebagai file", jangan HEIC). Captionnya
   isi deskripsi seller, lalu ketik `/tiktok-pack`.
